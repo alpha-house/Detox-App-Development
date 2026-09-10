@@ -1,0 +1,9 @@
+- Added tab for collecting vehicle incident report information. This tab is shown only when the field <Vehicle Incident> is set to true. when the tab is hidden, any fields in that list get setRequiredLevel("none"); when shown, they go back to "required". So the tab and its required fields always move together — never hidden-but-still-required.
+
+- Added tab for collecting staff injury report information. This tab is shown only when the field <Was There A Staff Injury> is set to true. when the tab is hidden, any fields in that list get setRequiredLevel("none"); when shown, they go back to "required". So the tab and its required fields always move together — never hidden-but-still-required.
+
+
+
+
+
+- This deployment is used to resolve conflicting configuration of solution assets due to solution layers.

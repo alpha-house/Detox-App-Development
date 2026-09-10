@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<manifest>
+  <control namespace="AlphaHouse" constructor="TurnawayAnalytics" version="1.0.2"
+           display-name-key="Turnaway Analytics"
+           description-key="Interactive turnaway breakdown - filter by month, spread columns by Gender and/or Assessment Method."
+           control-type="virtual">
+    <external-service-usage enabled="false">
+    </external-service-usage>
+    <!-- Bind this to an Assessment view (e.g. 'All Turnaways'). The control reads
+         cp_assessmentdateandtime, cp_gender, cp_assessmentmethod and cp_isduplicate
+         from the view's records - make sure those columns are on the view. -->
+    <data-set name="turnaways" display-name-key="Assessments">
+    </data-set>
+    <resources>
+      <code path="index.ts" order="1"/>
+      <css path="css/TurnawayAnalytics.css" order="1" />
+      <platform-library name="React" version="16.14.0" />
+    </resources>
+    <feature-usage>
+      <uses-feature name="WebAPI" required="true" />
+    </feature-usage>
+  </control>
+</manifest>

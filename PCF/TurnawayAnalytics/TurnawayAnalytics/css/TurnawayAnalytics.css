@@ -1,0 +1,232 @@
+.ta-root {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  color: #383838;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow: hidden;
+}
+
+.ta-inner {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ta-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.ta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ta-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #6b6b6b;
+}
+
+.ta-select {
+  min-width: 190px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #c8ccd1;
+  border-radius: 4px;
+  background: #fff;
+  color: #383838;
+  font: inherit;
+  font-size: 13px;
+}
+
+.ta-select:focus {
+  outline: 2px solid #587b70;
+  outline-offset: -1px;
+}
+
+.ta-seg {
+  display: inline-flex;
+  border: 1px solid #c8ccd1;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ta-seg-btn {
+  border: 0;
+  border-left: 1px solid #c8ccd1;
+  background: #fff;
+  color: #4a4a4a;
+  font: inherit;
+  font-size: 12.5px;
+  padding: 6px 12px;
+  cursor: pointer;
+  height: 30px;
+}
+
+.ta-seg-btn:first-child {
+  border-left: 0;
+}
+
+.ta-seg-btn:hover {
+  background: #f2f4f3;
+}
+
+.ta-seg-on {
+  background: #587b70;
+  color: #fff;
+}
+
+.ta-seg-on:hover {
+  background: #4c6b61;
+}
+
+.ta-spacer {
+  flex: 1 1 auto;
+}
+
+.ta-total {
+  font-size: 13px;
+  color: #383838;
+  white-space: nowrap;
+  padding-bottom: 4px;
+}
+
+.ta-total b {
+  font-size: 16px;
+}
+
+.ta-msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  flex: 1;
+  color: #6b6b6b;
+  font-size: 13px;
+  text-align: center;
+  padding: 16px;
+}
+
+.ta-msg-warn {
+  color: #8a5300;
+  background: #fff4e5;
+  border: 1px solid #f2d9b3;
+  border-radius: 6px;
+}
+
+.ta-chartwrap {
+  flex: 1;
+  min-height: 240px;
+}
+
+.ta-svg {
+  display: block;
+  max-width: 100%;
+}
+
+.ta-grid {
+  stroke: #eef1f4;
+  stroke-width: 1;
+}
+
+.ta-axis-line {
+  stroke: #c8ccd1;
+  stroke-width: 1;
+}
+
+.ta-axis-text {
+  fill: #6b6b6b;
+  font-size: 11px;
+}
+
+.ta-xlabel {
+  font-size: 11px;
+}
+
+.ta-barlabel {
+  fill: #383838;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ta-bar {
+  transition: opacity 0.12s ease;
+  cursor: default;
+}
+
+.ta-bar:hover {
+  opacity: 0.82;
+}
+
+.ta-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #383838;
+  color: #fff;
+  border-radius: 5px;
+  padding: 6px 9px;
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  max-width: 220px;
+  z-index: 5;
+}
+
+.ta-tt-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.ta-tt-key {
+  opacity: 0.85;
+}
+
+.ta-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #eef1f4;
+}
+
+.ta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  border-radius: 12px;
+  padding: 2px 9px 2px 6px;
+  font-size: 11.5px;
+  color: #383838;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ta-chip:hover {
+  background: #f5f5f5;
+}
+
+.ta-chip-off {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.ta-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}

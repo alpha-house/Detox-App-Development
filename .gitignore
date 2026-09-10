@@ -1,0 +1,25 @@
+.env
+**/local.settings.json
+.venv/
+Exclude From Git/
+.vscode/settings.json
+.claude/mcp_settings.json
+.claude/settings.local.json
+.token_cache.bin
+*.snk
+__pycache__/
+*.pyc
+solutions/*.zip
+plugins/**/bin/
+plugins/**/obj/
+
+# OneDrive / file-sync lock marker
+.849C9593-D756-4E56-8D6E-42412F2A707B
+
+# PCF / Node build output (belt-and-suspenders; each PCF project also has its own .gitignore)
+**/node_modules/
+PCF/**/out/
+PCF/**/bin/
+PCF/**/obj/
+PCF/**/generated/
+*.binlog
