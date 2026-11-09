@@ -1,7 +1,118 @@
-- Added tab for collecting vehicle incident report information. This tab is shown only when the field <Vehicle Incident> is set to true. when the tab is hidden, any fields in that list get setRequiredLevel("none"); when shown, they go back to "required". So the tab and its required fields always move together — never hidden-but-still-required.
+1.
+Stands up the floor plan from scratch in a new environment: the mat records
+themselves plus their layout, which nothing in the repo could do before.
+Reset Mat Layout only restores mats that already exist.
 
-- Added tab for collecting staff injury report information. This tab is shown only when the field <Was There A Staff Injury> is set to true. when the tab is hidden, any fields in that list get setRequiredLevel("none"); when shown, they go back to "required". So the tab and its required fields always move together — never hidden-but-still-required.
+Manual trigger, with an optional Mat plan name (blank = Floor Plan). It finds
+that plan, creates it if absent, then creates each of the 117 mats unless one
+with the same label is already on the plan, so it is safe to re-run.
 
+Each mat is created with label, number, X/Y, Default X/Y set to the same
+values, width, height, gender, Render = Yes, Standard Mat = Yes, Client Mats
+and the plan link. Fill and stroke are left alone -- they are formula columns
+that compute themselves. The three Overflow mats are excluded as they are not
+part of the default plan.
+
+The configuration is embedded in the flow rather than read from anywhere,
+since the target environment has no mats yet. It was taken from the sandbox
+after the layout was reset, so it matches the floor plan exactly.
+
+Verified in the sandbox: a run with all 117 present created nothing; deleting
+OPS and mat 29 and re-running recreated both with every field identical and
+the colour formulas recomputed.
+
+2.
+Staff Information Update is now a root component of the Shelter solution, so
+its definition is tracked here for the first time. This is the rebuilt
+version: it matches staff by email, then employee number, then full name,
+updates existing records instead of only creating, covers terminated
+employees, and runs in under a minute rather than failing after three hours.
+
+Also picked up by re-exporting: the Pattern of Use table and its
+relationships, the cp_pattern_of_use web resource, forms and views for the
+High Intox breathing round tables, an other_routes_of_administration
+business rule, and assorted entity, relationship, sitemap and app drift.
+
+3.
+Re-exported after the mat configuration flow was saved with a solution
+connection reference; the flow files were already current, so this is the
+only change.
+
+On the Shelter Checkin main form, the Substances control is replaced by a
+subgrid ("New SG control 1790174878697"). The replacement drops the
+cp_patternofuse_Client_contact relationship filter the old control carried,
+so it is no longer filtered to the check-in's client.
+
+4.
+Create Detox Assessment produced an assessment with no substance history, so
+staff re-entered what was already recorded against the check-in.
+
+After creating and linking the assessment, the flow now lists the Pattern of
+Use rows on the detox list record's Shelter Checkin and sets each one's
+Assessment lookup to the new assessment. Skipped when the record has no
+check-in; the assessment is still created.
+
+Links rather than duplicates: a Pattern of Use row carries separate check-in,
+assessment and admission lookups, so one record can belong to all three. This
+matches the existing Link Pattern Of Use to Admission flow. Copying would
+give two rows per substance and split later edits.
+
+Verified with a synthetic client, check-in, two substances and a detox list
+record: both substances came back attached to the new assessment and still on
+the check-in.
+
+5.
+create-and-set-initial-mat-configuration is off the Boreal connection
+reference (ahb_sharedcommondataserviceforapps_c4d89) that left Staff
+Information Update failing nightly. Its actions now span two references:
+cp_sharedcommondataserviceforapps_04f4e and _fd4e4, and Solution.xml records
+_fd4e4 as a missing dependency since it lives in Active rather than Shelter.
+
+Pattern of Use quick create form: the Route of Administration control is
+replaced by cr6ca_routeofadminstration, a choice column created under the
+default publisher prefix rather than cp, with Administration misspelled. It
+holds the data (106 of 111 rows) while cp_routeofadministration has 1.
+
+6.
+The Shelter Client form had no single place to see a client's history across
+programmes: Detox admissions, Boreal intakes and Shelter check-ins each live
+in their own table.
+
+ServiceTransactions is a dataset control that reads all three directly for the
+client whose form it sits on, unions them, and lists them newest first with
+Start Date, End Date, Provider of Service, Service Type and Stay. Dates map
+per table: cp_admissiondate/cp_actualdischargedate, ahb_dateofintake/
+ahb_programexitdate, cp_checkindate/cp_checkoutdate. Service Type is fixed by
+programme -- Detox, Emergency Shelter, Transitional Housing. It also has a
+date-range filter with presets, paging, per-programme counts, and a pencil
+that opens the stay itself.
+
+Each table is queried separately so a user without access to one programme
+still sees the others, with a note about what is missing.
+
+The control ignores its dataset; it only needs a subgrid to host it. On this
+form that host is a contact subgrid over the Active Clients view -- a view the
+Shelter app includes, which is what the host needs to be. The dataset property
+is still named cp_servicetransaction, after a table since removed.
+
+7.
+Picked up by re-exporting after the Service Transactions work.
+
+The Shelter solution now carries the Detox admission (cp_cp_admission) and
+Boreal intake (ahb_intake) tables, plus the ahb_applist and cp_servicetype
+global choices. These came in as dependencies when the Service Transactions
+table was created with lookups to the three stays and choice columns over
+those option sets. Deleting that table removed its own components but left
+these behind, so the solution is now wider than it was.
+
+Also includes assorted entity and relationship drift and a set of classic
+business rules on admissions, and assessments.
+
+8.
+The control is now a root component, so the built bundle ships with the
+solution. This also clears a MissingDependency: the Shelter Client form
+referenced cp_CpShelter.ServiceTransactions while the control itself sat in
+Active, which would have failed on import into another environment.
 
 
 
