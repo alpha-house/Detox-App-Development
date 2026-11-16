@@ -1,5 +1,5 @@
 // Data access for the MAR Sheet control (Dataverse Web API via context.webAPI).
-import { ClientInfo, DOSE_UNITS, DoseRow, MAR_STATUS, ReconRow, SheetInfo, Staff } from "./types";
+import { ClientInfo, DOSE_UNITS, DayRow, DoseRow, MAR_STATUS, ReconRow, SheetInfo, Staff } from "./types";
 
 type Rec = Record<string, unknown>;
 
@@ -13,6 +13,8 @@ export interface DoseInput {
   bp?: string;
   hr?: number;
   staff?: Staff;
+  /** Titration sheets: the cp_marday record for the dose's date, if one exists. */
+  dayId?: string;
 }
 export interface ReconInput {
   at: Date;
@@ -161,6 +163,7 @@ export class MarApi {
       cp_hr: v.hr ?? null,
     };
     if (v.staff) body["cp_Staff@odata.bind"] = `/cp_staffs(${v.staff.id})`;
+    if (v.dayId) body["cp_MARDay@odata.bind"] = `/cp_mardaies(${v.dayId})`;
     if (v.id) {
       await this.web.updateRecord("cp_medicationadministration", v.id, body);
       return;
@@ -193,6 +196,36 @@ export class MarApi {
     body.cp_sheettype = sheet.sheetType;
     if (sheet.admissionId) body["cp_Admission@odata.bind"] = `/cp_cp_admissions(${sheet.admissionId})`;
     await this.web.createRecord("cp_medicationreconciliation", body);
+  }
+
+  async loadDays(sheetId: string): Promise<DayRow[]> {
+    const res = await this.web.retrieveMultipleRecords(
+      "cp_marday",
+      `?$select=cp_daydate,cp_daynumber,cp_dayinstruction&$filter=_cp_marsheet_value eq ${sheetId} and statecode eq 0&$orderby=cp_daydate asc`,
+      500
+    );
+    return res.entities
+      .map((e: Rec) => ({
+        id: String(e.cp_mardayid),
+        date: (str(e.cp_daydate) ?? "").substring(0, 10),
+        dayNumber: num(e.cp_daynumber),
+        instruction: str(e.cp_dayinstruction),
+      }))
+      .filter((d) => d.date);
+  }
+
+  /** Create or update the day box's instruction (one cp_marday per sheet + date). */
+  async saveDay(sheet: SheetInfo, v: { id?: string; date: string; dayNumber: number; instruction?: string }): Promise<string> {
+    const body: Rec = { cp_dayinstruction: v.instruction ?? null, cp_daynumber: v.dayNumber };
+    if (v.id) {
+      await this.web.updateRecord("cp_marday", v.id, body);
+      return v.id;
+    }
+    body.cp_daydate = v.date;
+    body.cp_sheettype = sheet.sheetType;
+    body["cp_MARSheet@odata.bind"] = `/cp_marsheets(${sheet.id})`;
+    const r = await this.web.createRecord("cp_marday", body);
+    return r.id;
   }
 
   async setRefusalCount(sheetId: string, n: number): Promise<void> {

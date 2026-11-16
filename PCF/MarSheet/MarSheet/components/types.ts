@@ -99,6 +99,14 @@ export interface ReconRow {
   staff2?: Staff;
 }
 
+/** A titration/taper day box's own record (cp_marday): the per-day instruction. */
+export interface DayRow {
+  id: string;
+  date: string; // yyyy-mm-dd (DateOnly)
+  dayNumber?: number;
+  instruction?: string;
+}
+
 /** Layout for the "daily box" sheets: DATE boxes of TIME/DOSE/COUNT/ID/BP-HR + TD,
  *  with the Medication Reconciliation panel on the right. */
 export interface DailyBoxLayout {
@@ -108,6 +116,8 @@ export interface DailyBoxLayout {
   countLabel: string;
   /** Suboxone: the count column is split into 2 mg and 8 mg (cp_count2mg / cp_count8mg). */
   splitCounts?: boolean;
+  /** Titration sheets: each DATE box carries an INSTRUCTION, stored as a cp_marday record. */
+  dayInstructions?: boolean;
   showHR: boolean;
   boxesPerPage: number;
   minRows: number;
@@ -161,5 +171,24 @@ export const LAYOUTS: Record<number, SheetLayout> = {
     splitCounts: true,
     instructionsLabel: "INSTRUCTIONS: Please include prescription start and end dates",
     footer: ["TD = TOTAL DAILY DOSE   AMT = AMOUNT REMAINING", REFUSAL_RULE],
+  },
+  [SHEET.MT]: {
+    ...MAINTENANCE,
+    title: "METHADONE/KADIAN TITRATION",
+    corner: "Taper Medication Sheet",
+    boxesPerPage: 8,
+    dayInstructions: true,
+    instructionsLabel: "ADDED INSTRUCTIONS/NOTES: Please include start and end dates",
+    footer: ["TD = TOTAL DAILY COUNT", REFUSAL_RULE],
+  },
+  [SHEET.ST]: {
+    ...MAINTENANCE,
+    title: "SUBOXONE TITRATION",
+    corner: "Taper Medication Sheet",
+    boxesPerPage: 8,
+    dayInstructions: true,
+    splitCounts: true,
+    instructionsLabel: "ADDED INSTRUCTIONS/NOTES:",
+    footer: ["TD = TOTAL DAILY COUNT", REFUSAL_RULE],
   },
 };

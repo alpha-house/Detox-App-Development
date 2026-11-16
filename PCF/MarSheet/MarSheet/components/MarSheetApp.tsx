@@ -2,7 +2,7 @@ import * as React from "react";
 import { MarApi, errorText } from "./api";
 import { DailyBoxSheet } from "./DailyBoxSheet";
 import { fmtDateOnly } from "./dates";
-import { DoseRow, LAYOUTS, ReconRow, SHEET_LABELS, SheetInfo, Staff } from "./types";
+import { DayRow, DoseRow, LAYOUTS, ReconRow, SHEET_LABELS, SheetInfo, Staff } from "./types";
 
 export interface MarSheetAppProps {
   api: MarApi;
@@ -16,6 +16,7 @@ interface Data {
   sheet: SheetInfo;
   doses: DoseRow[];
   recons: ReconRow[];
+  days: DayRow[];
 }
 
 export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, readOnly, width }) => {
@@ -29,8 +30,13 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
     if (!sheetId) return;
     setLoading(true);
     try {
-      const [sheet, doses, recons] = await Promise.all([api.loadSheet(sheetId), api.loadDoses(sheetId), api.loadRecons(sheetId)]);
-      setData({ sheet, doses, recons });
+      const [sheet, doses, recons, days] = await Promise.all([
+        api.loadSheet(sheetId),
+        api.loadDoses(sheetId),
+        api.loadRecons(sheetId),
+        api.loadDays(sheetId),
+      ]);
+      setData({ sheet, doses, recons, days });
       setError(undefined);
     } catch (e) {
       setError(errorText(e));
@@ -127,7 +133,7 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
         </div>
 
         {layout ? (
-          <DailyBoxSheet api={api} sheet={sheet} layout={layout} doses={data.doses} recons={data.recons} me={me}
+          <DailyBoxSheet api={api} sheet={sheet} layout={layout} doses={data.doses} recons={data.recons} days={data.days} me={me}
             readOnly={readOnly} stacked={width > 0 && width < 1100} reload={load} />
         ) : (
           <div className="mar-banner">

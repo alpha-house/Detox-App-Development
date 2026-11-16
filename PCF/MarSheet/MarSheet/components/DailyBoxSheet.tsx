@@ -14,7 +14,7 @@ import {
   timeInputValue,
 } from "./dates";
 import { StaffPicker } from "./StaffPicker";
-import { DailyBoxLayout, DoseRow, ReconRow, SheetInfo, Staff } from "./types";
+import { DailyBoxLayout, DayRow, DoseRow, ReconRow, SheetInfo, Staff } from "./types";
 
 interface Props {
   api: MarApi;
@@ -22,6 +22,7 @@ interface Props {
   layout: DailyBoxLayout;
   doses: DoseRow[];
   recons: ReconRow[];
+  days: DayRow[];
   me?: Staff;
   readOnly: boolean;
   stacked: boolean;
@@ -92,6 +93,7 @@ export const DailyBoxSheet: React.FC<Props> = (p) => {
     }
   };
 
+  const dayByKey = React.useMemo(() => new Map(p.days.map((d) => [d.date, d])), [p.days]);
   const unit = sheet.doseUnit ? ` ${sheet.doseUnit}` : "";
   const canAddDose = !p.readOnly && sheet.status === "Active";
   const split = !!layout.splitCounts;
@@ -128,6 +130,23 @@ export const DailyBoxSheet: React.FC<Props> = (p) => {
                   {k === dayKey(today) && <span className="mar-tag">Today</span>}
                   {afterEnd && <span className="mar-tag mar-tag-warn">After script end</span>}
                 </div>
+                {layout.dayInstructions && (
+                  <DayInstruction
+                    day={dayByKey.get(k)}
+                    editable={!p.readOnly}
+                    busy={busy}
+                    onSave={(text) =>
+                      run(async () => {
+                        await p.api.saveDay(sheet, {
+                          id: dayByKey.get(k)?.id,
+                          date: k,
+                          dayNumber: diffDays(anchor, day) + 1,
+                          instruction: text,
+                        });
+                      })
+                    }
+                  />
+                )}
                 <table className={"mar-table" + (split ? " mar-split" : "")}>
                   <thead>
                     <tr>
@@ -149,7 +168,7 @@ export const DailyBoxSheet: React.FC<Props> = (p) => {
                     {rows.map((r) =>
                       editing?.kind === "dose" && editing.id === r.id ? (
                         <DoseEditor key={r.id} {...p} day={day} row={r} busy={busy} onCancel={() => setEditing(null)}
-                          onSave={(v) => void run(() => p.api.saveDose(sheet, { ...v, id: r.id }))} />
+                          onSave={(v) => void run(() => p.api.saveDose(sheet, { ...v, id: r.id, dayId: dayByKey.get(k)?.id }))} />
                       ) : (
                         <tr key={r.id} className={p.readOnly ? "" : "mar-row-click"} onClick={() => !p.readOnly && !busy && setEditing({ kind: "dose", day: k, id: r.id })}>
                           <td>{fmtTime(r.at)}</td>
@@ -170,7 +189,7 @@ export const DailyBoxSheet: React.FC<Props> = (p) => {
                     {canAddDose && !isFuture &&
                       (addingHere ? (
                         <DoseEditor {...p} day={day} busy={busy} onCancel={() => setEditing(null)}
-                          onSave={(v) => void run(() => p.api.saveDose(sheet, v))} />
+                          onSave={(v) => void run(() => p.api.saveDose(sheet, { ...v, dayId: dayByKey.get(k)?.id }))} />
                       ) : (
                         <tr className="mar-row-add" onClick={() => !busy && setEditing({ kind: "dose", day: k })}>
                           <td colSpan={cols}>+ Record dose</td>
@@ -197,6 +216,49 @@ export const DailyBoxSheet: React.FC<Props> = (p) => {
       </div>
 
       <ReconPanel {...p} editing={editing} setEditing={setEditing} busy={busy} run={run} />
+    </div>
+  );
+};
+
+// ------------------------------------------------------------------ day instruction (titration sheets)
+interface DayInstructionProps {
+  day?: DayRow;
+  editable: boolean;
+  busy: boolean;
+  onSave: (text: string | undefined) => Promise<void>;
+}
+
+const DayInstruction: React.FC<DayInstructionProps> = ({ day, editable, busy, onSave }) => {
+  const [editing, setEditing] = React.useState(false);
+  const [text, setText] = React.useState(day?.instruction ?? "");
+  React.useEffect(() => setText(day?.instruction ?? ""), [day?.instruction]);
+
+  if (editing) {
+    return (
+      <div className="mar-box-instr mar-box-instr-edit">
+        <span className="mar-field-label">INSTRUCTION</span>
+        <textarea className="mar-input" rows={2} value={text} onChange={(e) => setText(e.target.value)} />
+        <div className="mar-instr-actions">
+          <button type="button" className="mar-btn" disabled={busy} onClick={() => { setText(day?.instruction ?? ""); setEditing(false); }}>Cancel</button>
+          <button type="button" className="mar-btn mar-btn-primary" disabled={busy}
+            onClick={() => {
+              const save = async () => {
+                await onSave(text.trim() || undefined);
+                setEditing(false);
+              };
+              void save();
+            }}>
+            {busy ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={"mar-box-instr" + (editable ? " mar-row-click" : "")} onClick={() => editable && !busy && setEditing(true)}
+      title={editable ? "Tap to edit the day's instruction" : undefined}>
+      <span className="mar-field-label">INSTRUCTION:</span>{" "}
+      {day?.instruction ? <span className="mar-instr-text">{day.instruction}</span> : editable ? <span className="mar-instr-add">+ Add instruction</span> : null}
     </div>
   );
 };

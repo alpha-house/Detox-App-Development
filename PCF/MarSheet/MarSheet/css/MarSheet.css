@@ -55,6 +55,13 @@
 .mar-box-today { background: var(--today); }
 .mar-box-future { opacity: 0.55; }
 .mar-box-date { padding: 3px 4px; border-bottom: 1px solid var(--rule); font-size: 12px; min-height: 24px; }
+/* titration sheets: the day's INSTRUCTION under the DATE line */
+.mar-box-instr { padding: 3px 4px; border-bottom: 1px solid var(--rule); min-height: 40px; font-size: 12px; }
+.mar-instr-text { white-space: pre-wrap; font-weight: 600; }
+.mar-instr-add { color: var(--accent); }
+.mar-box-instr-edit { display: flex; flex-direction: column; gap: 3px; background: #eef5fc; }
+.mar-box-instr-edit textarea { resize: vertical; }
+.mar-instr-actions { text-align: right; }
 .mar-tag { margin-left: 6px; font-size: 10px; padding: 0 5px; border-radius: 8px; background: var(--accent); color: #fff; }
 .mar-tag-warn { background: #c19c00; }
 
