@@ -116,19 +116,36 @@ export type SheetLayout = DailyBoxLayout;
 const REFUSAL_RULE =
   "CHART IF REFUSE MEDICATION AND WHY. AFTER 3 REFUSALS CLIENT MEDICATION TO BE STOPPED AND SEE A CLINICIAN IF REQUESTING RE-START";
 
-/** Pilot: Methadone/Kadian Maintenance. Other sheets are added here as they are built. */
+/** The 12-date-box maintenance layout shared by Methadone/Kadian, High-Risk Controlled
+ *  and Benzodiazepine Maintenance; each sheet only overrides its own wording. */
+const MAINTENANCE: DailyBoxLayout = {
+  kind: "dailyBox",
+  title: "",
+  corner: "Medication Sheet",
+  countLabel: "COUNT",
+  showHR: true,
+  boxesPerPage: 12,
+  minRows: 3,
+  substanceHint: "(TYPE OF OPIATE / LAST USE)",
+  instructionsLabel: "INSTRUCTIONS:",
+  footer: ["TD = TOTAL DAILY DOSE", REFUSAL_RULE],
+  reconCountLabel: "#",
+};
+
+/** Sheets with a built paper layout. Other sheet types fall back to the standard tabs. */
 export const LAYOUTS: Record<number, SheetLayout> = {
   [SHEET.MK]: {
-    kind: "dailyBox",
+    ...MAINTENANCE,
     title: "METHADONE/KADIAN MAINTENANCE MEDICATION",
-    corner: "Medication Sheet",
-    countLabel: "COUNT",
-    showHR: true,
-    boxesPerPage: 12,
-    minRows: 3,
-    substanceHint: "(TYPE OF OPIATE / LAST USE)",
     instructionsLabel: "INSTRUCTIONS: Please include script end and start dates",
-    footer: ["TD = TOTAL DAILY DOSE", REFUSAL_RULE],
-    reconCountLabel: "#",
+  },
+  [SHEET.HC]: {
+    ...MAINTENANCE,
+    title: "HIGH-RISK CONTROLLED MEDICATION – OPIATES/STIMULANTS/NABILONE/T3'S",
+    substanceHint: "",
+  },
+  [SHEET.BM]: {
+    ...MAINTENANCE,
+    title: "BENZODIAZEPINE MAINTENANCE MEDICATION",
   },
 };

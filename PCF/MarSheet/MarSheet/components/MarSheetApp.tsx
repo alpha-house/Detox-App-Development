@@ -60,7 +60,7 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
     return (
       <div className="mar-root">
         <div className="mar-banner">
-          Choose the <b>Sheet Type</b> and fill in the prescription on the <b>Sheet</b> tab, then <b>Save</b>. The paper
+          Choose the <b>Sheet Type</b>, fill in the prescription on the <b>Sheet</b> tab, then <b>Save</b>. The paper
           sheet appears here once the MAR Sheet is saved.
         </div>
       </div>
@@ -131,8 +131,8 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
             readOnly={readOnly} stacked={width > 0 && width < 1100} reload={load} />
         ) : (
           <div className="mar-banner">
-            The paper layout for <b>{SHEET_LABELS[sheet.sheetType] ?? "this sheet type"}</b> is not built yet (pilot covers
-            Methadone/Kadian Maintenance). Use the <b>Doses &amp; Reconciliation</b> tab for now.
+            The paper layout for <b>{SHEET_LABELS[sheet.sheetType] ?? "this sheet type"}</b> is not built yet. Use the{" "}
+            <b>Doses &amp; Reconciliation</b> tab for now.
           </div>
         )}
 

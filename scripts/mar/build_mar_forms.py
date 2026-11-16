@@ -103,8 +103,9 @@ def section(key, title, rows, table, two_col=True, showlabel=True):
 
 
 def subgrid_section(key, title, relationship, target, view_id, per_page=10, height=8):
-    # the section already shows the title, so the grid cell's own label is hidden
-    rows = (f'<row><cell id="{g(key + "cell")}" showlabel="false" rowspan="{height}" colspan="1" auto="false">'
+    # the grid renders its cell label as its own title, so that is the one kept;
+    # the section heading is hidden to avoid showing the title twice
+    rows = (f'<row><cell id="{g(key + "cell")}" showlabel="true" rowspan="{height}" colspan="1" auto="false">'
             f'{lbl(title)}<control indicationOfSubgrid="true" id="{key}" classid="{SUBGRID}"><parameters>'
             f'<RecordsPerPage>{per_page}</RecordsPerPage><AutoExpand>Fixed</AutoExpand>'
             f'<EnableQuickFind>false</EnableQuickFind><EnableViewPicker>false</EnableViewPicker>'
@@ -112,7 +113,7 @@ def subgrid_section(key, title, relationship, target, view_id, per_page=10, heig
             f'<RelationshipName>{relationship}</RelationshipName><TargetEntityType>{target}</TargetEntityType>'
             f'<ViewId>{{{view_id}}}</ViewId><ViewIds>{{{view_id}}}</ViewIds></parameters></control></cell></row>'
             + "<row />" * (height - 1))
-    return (f'<section name="{key}_section" id="{g(key + "section")}" showlabel="true" showbar="false" '
+    return (f'<section name="{key}_section" id="{g(key + "section")}" showlabel="false" showbar="false" '
             f'IsUserDefined="0" columns="1">{lbl(title)}<rows>{rows}</rows></section>')
 
 
