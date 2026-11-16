@@ -199,6 +199,32 @@ duplicated (e.g. K.Al). The Medications tab sits in the overflow menu on iPad
 width. The PRN daily maximum is a hard stop with no override, and the low B.G.
 threshold is 4.0 mmol/L -- both to be confirmed by the nursing team.
 
+13.
+Vital Signs sheet (Vital Signs, CIWA/COWS, Urine/Blood Testing Results
+Record), MAR Sheet control v0.1.16. cp_marsheettype gains Vital Signs
+(121570011); build_mar_schema.py now adds missing options to the existing
+global choice, so it stays re-runnable.
+
+Each ruled row is a cp_medicationadministration, like every other sheet. BP,
+HR and blood glucose reuse cp_bp, cp_hr and cp_ii_bglevel. New columns:
+cp_vs_respiratoryrate, cp_vs_oxygensaturation, cp_vs_temperature,
+cp_vs_cowsscore, cp_vs_ciwascore, cp_vs_hcgresult (Negative / Positive /
+Declined) and cp_vs_drugtestresult (positive results only). The Medication
+Administration form has a "Vital Signs only" section for them.
+
+The first row shows the admission's own intake readings, read from the
+admission rather than copied: cp_admissiondate, cp_bp, cp_hr, cp_o2sats,
+cp_temp, cp_cowsscore1, cp_ciwascore1 and Staff Completing Medical Portion.
+It is read-only on the sheet; edit it on the admission's Medical1 and
+Withdrawal tabs. The admission has no respiratory rate, so that cell is
+blank, and the CIWA/COWS Score 1 formula columns show 0 when no assessment is
+linked.
+
+A reading needs date, time, nurse initials and at least one value; numbers
+are range-checked, and a positive HCG or a B.G. under 4.0 mmol/L shows red.
+Tested in the sandbox with Playwright against a synthetic client, admission
+and sheet that were deleted afterwards.
+
 
 
 
