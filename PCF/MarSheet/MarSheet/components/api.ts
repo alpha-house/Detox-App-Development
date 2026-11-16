@@ -19,6 +19,9 @@ export interface DoseInput {
   amount?: number;
   notes?: string;
   medicationId?: string;
+  /** Insulin log. Only written when the key is present. */
+  bg?: number;
+  site?: number;
 }
 export interface ReconInput {
   at: Date;
@@ -92,13 +95,15 @@ export class MarApi {
   async loadDoses(sheetId: string): Promise<DoseRow[]> {
     const res = await this.web.retrieveMultipleRecords(
       "cp_medicationadministration",
-      "?$select=cp_administeredon,cp_dose,cp_count,cp_count2mg,cp_count8mg,cp_bp,cp_hr,cp_amount,cp_notes" +
+      "?$select=cp_administeredon,cp_dose,cp_count,cp_count2mg,cp_count8mg,cp_bp,cp_hr,cp_amount,cp_notes,cp_ii_bglevel,cp_ii_injectionsite" +
         `&$filter=_cp_marsheet_value eq ${sheetId} and statecode eq 0` +
         "&$orderby=cp_administeredon asc&$expand=cp_Staff($select=cp_staffid,cp_name,cp_initials)," +
         "cp_DetoxMedication($select=cp_detoxmedicationid,cp_name)",
       5000
     );
     return res.entities.map((e: Rec) => ({
+      bg: num(e.cp_ii_bglevel),
+      site: num(e.cp_ii_injectionsite),
       amount: num(e.cp_amount),
       notes: str(e.cp_notes),
       medicationId: str(((e.cp_DetoxMedication ?? {}) as Rec).cp_detoxmedicationid),
@@ -176,6 +181,8 @@ export class MarApi {
     if (v.dayId) body["cp_MARDay@odata.bind"] = `/cp_mardaies(${v.dayId})`;
     if ("amount" in v) body.cp_amount = v.amount ?? null;
     if ("notes" in v) body.cp_notes = v.notes ?? null;
+    if ("bg" in v) body.cp_ii_bglevel = v.bg ?? null;
+    if ("site" in v) body.cp_ii_injectionsite = v.site ?? null;
     if (v.medicationId) body["cp_DetoxMedication@odata.bind"] = `/cp_detoxmedications(${v.medicationId})`;
     if (v.id) {
       await this.web.updateRecord("cp_medicationadministration", v.id, body);

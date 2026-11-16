@@ -171,8 +171,11 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
 
         {layout && (
           <div className="mar-footer">
-            <div><b>{layout.instructionsLabel}</b></div>
-            {sheet.instructions && <div className="mar-instructions">{sheet.instructions}</div>}
+            {layout.instructionsLabel && <div><b>{layout.instructionsLabel}</b></div>}
+            {/* the insulin log shows the prescription instructions inside its block instead */}
+            {sheet.instructions && !(layout.kind === "prn" && layout.blockStyle === "insulin") && (
+              <div className="mar-instructions">{sheet.instructions}</div>
+            )}
             {layout.footer.map((f) => (
               <div key={f} className="mar-small">{f}</div>
             ))}

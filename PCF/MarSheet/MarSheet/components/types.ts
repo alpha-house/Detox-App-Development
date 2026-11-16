@@ -90,6 +90,8 @@ export interface DoseRow {
   notes?: string;
   medicationId?: string;
   medicationName?: string;
+  bg?: number;
+  site?: number;
 }
 
 export interface ReconRow {
@@ -163,7 +165,28 @@ export interface PrnLayout {
   showDoseField: boolean;
   /** Header shows the "contraindicated with PRN (OTC) medications" line. */
   contraLine: boolean;
+  /** What one entry records: AMT (PRN / Home) or TIME / B.G. LEVEL / DOSE-UNITS / INJ. SITE (Insulin). */
+  entry?: "amount" | "insulin";
+  /** Sheet-mode block header: Home MAR (dose / frequency / start / end) or Insulin
+   *  ("type of insulin injection and prescription instructions"). */
+  blockStyle?: "home" | "insulin";
+  /** Column heading for the entries. */
+  entriesLabel?: string;
 }
+
+/** cp_ii_injectionsite option values -> label / short label (as written in the INJ. SITE box). */
+export const INJECTION_SITES: { value: number; label: string; short: string }[] = [
+  { value: 121570000, label: "Abdomen - Left", short: "Abd L" },
+  { value: 121570001, label: "Abdomen - Right", short: "Abd R" },
+  { value: 121570002, label: "Arm - Left", short: "Arm L" },
+  { value: 121570003, label: "Arm - Right", short: "Arm R" },
+  { value: 121570004, label: "Thigh - Left", short: "Thigh L" },
+  { value: 121570005, label: "Thigh - Right", short: "Thigh R" },
+  { value: 121570006, label: "Buttock - Left", short: "Butt L" },
+  { value: 121570007, label: "Buttock - Right", short: "Butt R" },
+];
+/** BG below this (mmol/L) is shown as low. */
+export const LOW_BG = 4.0;
 
 export type SheetLayout = DailyBoxLayout | PrnLayout;
 
@@ -212,6 +235,22 @@ export const LAYOUTS: Record<number, SheetLayout> = {
     requireWhy: true,
     showDoseField: true,
     contraLine: true,
+  },
+  [SHEET.II]: {
+    kind: "prn",
+    title: "INSULIN INJECTION LOG",
+    corner: "Alpha House Detox",
+    substanceHint: "",
+    instructionsLabel: "",
+    footer: ["B.G. = blood glucose (mmol/L). Chart a held dose as 0 units and note why."],
+    slotsPerRow: 3,
+    source: "sheet",
+    requireWhy: false,
+    showDoseField: false,
+    contraLine: false,
+    entry: "insulin",
+    blockStyle: "insulin",
+    entriesLabel: "TIME / B.G. LEVEL / DOSE (UNITS) / INJ. SITE / INITIALS",
   },
   [SHEET.HM]: {
     kind: "prn",
