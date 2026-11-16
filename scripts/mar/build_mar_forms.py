@@ -236,11 +236,14 @@ def step_mappings():
 
 
 # ------------------------------------------------------------------ 3. forms
-def upsert_form(table, ftype, name, xml, existing_name="Information", description=""):
+def upsert_form(table, ftype, name, xml, existing_name="Information", description="", create_only=False):
     forms = call("GET", f"systemforms?$select=formid,name&$filter=objecttypecode eq '{table}' and type eq {ftype}")["value"]
     match = next((f for f in forms if f["name"] == name), None) or \
         next((f for f in forms if f["name"] == existing_name and ftype == 2), None)
     body = {"name": name, "formxml": xml, "description": description}
+    if match and create_only and match["name"] == name:
+        print(f"   {table}: form '{name}' exists - left as is (maintained in the maker portal)")
+        return match["formid"]
     if match:
         call("PATCH", f"systemforms({match['formid']})", body)
         print(f"   {table}: form '{name}' updated")
@@ -283,7 +286,8 @@ def step_forms(assoc):
                             "cp_medicationreconciliation", assoc["cp_medicationreconciliation"], 10, 8),
             subgrid_section("sg_mar_days", "Days (titration / taper sheets)", "cp_marsheet_cp_marday",
                             "cp_marday", assoc["cp_marday"], 8, 6)])],
-        pcf_binding("ms_paper") if has_pcf else ""))
+        pcf_binding("ms_paper") if has_pcf else ""),
+        create_only=True)  # the MAR Sheet form is now arranged by hand in the maker portal
 
     t = "cp_medicationadministration"
     upsert_form(t, 2, "Medication Administration", form([tab("ma_tab", "Dose", [
