@@ -1,0 +1,104 @@
+/* MAR Sheet — styled to read like the paper Medication Administration Record. */
+.mar-root {
+  --ink: #1b1b1b;
+  --rule: #3b3b3b;
+  --faint: #9a9a9a;
+  --paper: #ffffff;
+  --today: #fff8d6;
+  --accent: #0f5ea8;
+  --warn-bg: #fff4ce;
+  --warn-ink: #6b4e00;
+  --err-bg: #fde7e9;
+  --err-ink: #a4262c;
+  font-family: "Segoe UI", Calibri, Arial, sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  width: 100%;
+  box-sizing: border-box;
+}
+.mar-root *, .mar-root *::before, .mar-root *::after { box-sizing: border-box; }
+
+.mar-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+.mar-me { font-size: 12px; }
+.mar-warn { color: var(--warn-ink); }
+.mar-loading { padding: 16px; color: var(--faint); }
+
+.mar-banner { padding: 8px 10px; margin: 6px 0; border-left: 4px solid var(--accent); background: #eef5fc; }
+.mar-banner-warn { border-left-color: #c19c00; background: var(--warn-bg); color: var(--warn-ink); }
+.mar-banner-error { border-left-color: var(--err-ink); background: var(--err-bg); color: var(--err-ink); }
+
+.mar-paper { background: var(--paper); border: 2px solid var(--ink); padding: 0; }
+.mar-titlebar { position: relative; text-align: center; border-bottom: 2px solid var(--ink); padding: 4px 8px; }
+.mar-title { font-weight: 700; font-size: 15px; letter-spacing: 0.3px; }
+.mar-corner { position: absolute; right: 8px; top: 5px; font-weight: 600; }
+
+.mar-header { display: grid; grid-template-columns: 1.3fr 0.4fr 1.6fr; gap: 8px; padding: 6px 8px; }
+.mar-cap { font-size: 11px; color: #555; }
+.mar-client-name { font-weight: 700; font-size: 14px; }
+.mar-bed { align-self: start; padding-top: 4px; }
+.mar-presc > div { border-bottom: 1px solid var(--faint); padding: 2px 0; }
+.mar-allergy { color: var(--err-ink); }
+.mar-substance { border-bottom: 2px solid var(--ink); padding: 2px 8px 6px; }
+.mar-hint { font-weight: 700; float: right; }
+
+.mar-body { display: grid; grid-template-columns: minmax(0, 1fr) 360px; }
+.mar-body.mar-stacked { grid-template-columns: minmax(0, 1fr); }
+.mar-days { border-right: 2px solid var(--ink); min-width: 0; }
+.mar-stacked .mar-days { border-right: none; border-bottom: 2px solid var(--ink); }
+
+.mar-pager { display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; border-bottom: 1px solid var(--rule); font-size: 12px; }
+.mar-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 760px) { .mar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.mar-box { border-right: 1px solid var(--rule); border-bottom: 2px solid var(--ink); min-width: 0; }
+.mar-box:nth-child(4n) { border-right: none; }
+.mar-box-today { background: var(--today); }
+.mar-box-future { opacity: 0.55; }
+.mar-box-date { padding: 3px 4px; border-bottom: 1px solid var(--rule); font-size: 12px; min-height: 24px; }
+.mar-tag { margin-left: 6px; font-size: 10px; padding: 0 5px; border-radius: 8px; background: var(--accent); color: #fff; }
+.mar-tag-warn { background: #c19c00; }
+
+.mar-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.mar-table th { font-size: 10px; font-weight: 600; text-align: left; padding: 2px 3px; border-bottom: 1px solid var(--rule); border-right: 1px solid var(--rule); }
+.mar-table td { padding: 2px 3px; height: 26px; border-bottom: 1px solid #c8c8c8; border-right: 1px solid #c8c8c8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mar-table th:last-child, .mar-table td:last-child { border-right: none; }
+.mar-table tfoot td { font-weight: 700; border-top: 1px solid var(--rule); border-bottom: none; }
+
+.mar-row-click { cursor: pointer; }
+.mar-row-click:hover td { background: #eef5fc; }
+.mar-row-add td { color: var(--accent); cursor: pointer; font-size: 12px; }
+.mar-row-add:hover td { background: #eef5fc; }
+.mar-row-blank td { color: transparent; }
+.mar-row-edit td { background: #eef5fc; overflow: visible; white-space: normal; height: auto; vertical-align: top; }
+.mar-row-actions td { background: #eef5fc; text-align: right; height: auto; white-space: normal; }
+.mar-refusal td { color: var(--err-ink); }
+
+.mar-input { width: 100%; min-height: 30px; font: inherit; font-size: 13px; padding: 2px 4px; border: 1px solid #8a8a8a; border-radius: 2px; background: #fff; }
+.mar-input-wide { margin-top: 3px; }
+.mar-bphr { display: flex; gap: 2px; }
+.mar-check { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+.mar-msg { color: var(--err-ink); margin-right: 8px; font-size: 12px; }
+
+.mar-btn { font: inherit; font-size: 12px; min-height: 30px; padding: 3px 10px; margin-left: 4px; border: 1px solid #8a8a8a; border-radius: 3px; background: #fff; cursor: pointer; }
+.mar-btn:disabled { opacity: 0.5; cursor: default; }
+.mar-btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.mar-staff-chip { display: inline-flex; align-items: center; gap: 2px; font-weight: 700; }
+.mar-chip-x { border: none; background: none; cursor: pointer; font-size: 14px; color: #666; padding: 0 2px; }
+.mar-picker { position: relative; display: block; }
+.mar-picker-list { position: absolute; z-index: 20; left: 0; top: 100%; min-width: 220px; margin: 0; padding: 0; list-style: none; background: #fff; border: 1px solid #8a8a8a; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); }
+.mar-picker-list button { display: block; width: 100%; text-align: left; padding: 6px 8px; border: none; background: none; font: inherit; cursor: pointer; }
+.mar-picker-list button:hover { background: #eef5fc; }
+
+.mar-recon { min-width: 0; }
+.mar-recon-title { font-weight: 700; padding: 4px 6px; border-bottom: 1px solid var(--rule); font-size: 12px; }
+.mar-recon-title span { font-weight: 600; font-size: 10px; }
+.mar-recon .mar-table th:nth-child(1), .mar-recon .mar-table td:nth-child(1) { width: 58px; }
+.mar-recon .mar-table th:nth-child(2), .mar-recon .mar-table td:nth-child(2) { width: 50px; }
+.mar-recon .mar-table th:nth-child(3), .mar-recon .mar-table td:nth-child(3) { width: 36px; }
+.mar-recon .mar-table th:nth-child(5), .mar-recon .mar-table td:nth-child(5),
+.mar-recon .mar-table th:nth-child(6), .mar-recon .mar-table td:nth-child(6) { width: 52px; }
+
+.mar-footer { border-top: 2px solid var(--ink); padding: 6px 8px; }
+.mar-instructions { white-space: pre-wrap; margin: 4px 0; }
+.mar-small { font-size: 11px; font-weight: 600; margin-top: 2px; }

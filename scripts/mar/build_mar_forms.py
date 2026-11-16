@@ -130,8 +130,29 @@ def tab(key, title, sections):
             f'</column></columns></tab>')
 
 
-def form(tabs):
-    return f'<form><tabs>{"".join(tabs)}</tabs></form>'
+def form(tabs, control_descriptions=""):
+    return f'<form><tabs>{"".join(tabs)}</tabs>{control_descriptions}</form>'
+
+
+PCF_NAME = "cp_AlphaHouse.MarSheet"
+
+
+def pcf_section(key, title):
+    """A full-width cell holding cp_name, rendered by the MAR Sheet PCF (see pcf_binding)."""
+    return (f'<section name="{key}" id="{g(key)}" showlabel="false" showbar="false" IsUserDefined="0" columns="1">'
+            f'{lbl(title)}<rows><row><cell id="{g(key + "cell")}" showlabel="false">{lbl(title)}'
+            f'<control id="mar_paper_sheet" classid="{CLASSID["String"]}" datafieldname="cp_name" '
+            f'disabled="false" uniqueid="{g(key + "ctl")}" /></cell></row></rows></section>')
+
+
+def pcf_binding(key):
+    uid = g(key + "ctl")
+    per_factor = "".join(
+        f'<customControl name="{PCF_NAME}" formFactor="{ff}"><parameters>'
+        f'<anchor type="SingleLine.Text">cp_name</anchor></parameters></customControl>' for ff in (0, 1, 2))
+    return (f'<controlDescriptions><controlDescription forControl="{uid}">'
+            f'<customControl id="{CLASSID["String"]}"><parameters><datafieldname>cp_name</datafieldname>'
+            f'</parameters></customControl>{per_factor}</controlDescription></controlDescriptions>')
 
 
 # ------------------------------------------------------------------ 1. views
@@ -242,7 +263,11 @@ def step_forms(assoc):
                         description="Client details shown at the top of MAR sheets.")
 
     t = "cp_marsheet"
-    upsert_form(t, 2, "MAR Sheet", form([
+    has_pcf = bool(call("GET", f"customcontrols?$select=name&$filter=name eq '{PCF_NAME}'")["value"])
+    pcf_tabs = [tab("ms_tab_paper", "MAR", [pcf_section("ms_paper", "MAR")])] if has_pcf else []
+    if not has_pcf:
+        print(f"   {PCF_NAME} not deployed yet - MAR Sheet form built without the paper tab")
+    upsert_form(t, 2, "MAR Sheet", form(pcf_tabs + [
         tab("ms_tab_sheet", "Sheet", [
             quickview_section("ms_client", "Client", "cp_admission", qv_id),
             section("ms_presc", "Prescription", [
@@ -256,7 +281,8 @@ def step_forms(assoc):
             subgrid_section("sg_mar_recon", "Medication Reconciliation", "cp_marsheet_cp_medicationreconciliation",
                             "cp_medicationreconciliation", assoc["cp_medicationreconciliation"], 10, 8),
             subgrid_section("sg_mar_days", "Days (titration / taper sheets)", "cp_marsheet_cp_marday",
-                            "cp_marday", assoc["cp_marday"], 8, 6)])]))
+                            "cp_marday", assoc["cp_marday"], 8, 6)])],
+        pcf_binding("ms_paper") if has_pcf else ""))
 
     t = "cp_medicationadministration"
     upsert_form(t, 2, "Medication Administration", form([tab("ma_tab", "Dose", [
