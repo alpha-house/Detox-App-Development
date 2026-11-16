@@ -71,6 +71,7 @@ export interface SheetInfo {
   instructions?: string;
   status?: string;
   refusalCount: number;
+  contraindications?: string;
   admissionId?: string;
   client: ClientInfo;
 }
@@ -85,6 +86,10 @@ export interface DoseRow {
   bp?: string;
   hr?: number;
   staff?: Staff;
+  amount?: number;
+  notes?: string;
+  medicationId?: string;
+  medicationName?: string;
 }
 
 export interface ReconRow {
@@ -138,7 +143,32 @@ export interface DailyBoxLayout {
   reconCountLabel: string;
 }
 
-export type SheetLayout = DailyBoxLayout;
+/** PRN (OTC) layout: one block per medication (from cp_detoxmedication), each block a list of
+ *  DATE rows with TIME/AMT/INITIAL entries and NOTES / WHY NEEDED. No reconciliation panel. */
+export interface PrnLayout {
+  kind: "prn";
+  title: string;
+  corner: string;
+  substanceHint: string;
+  instructionsLabel: string;
+  footer: string[];
+  /** TIME/AMT/INITIAL slots per date row on paper (more wrap onto the same row). */
+  slotsPerRow: number;
+}
+
+export type SheetLayout = DailyBoxLayout | PrnLayout;
+
+/** A row of cp_detoxmedication. */
+export interface Medication {
+  id: string;
+  name: string;
+  strength?: string;
+  directions?: string;
+  maxDaily?: number;
+  maxUnit?: "mg" | "tabs";
+  prn: boolean;
+  order?: number;
+}
 
 const REFUSAL_RULE =
   "CHART IF REFUSE MEDICATION AND WHY. AFTER 3 REFUSALS CLIENT MEDICATION TO BE STOPPED AND SEE A CLINICIAN IF REQUESTING RE-START";
@@ -161,6 +191,15 @@ const MAINTENANCE: DailyBoxLayout = {
 
 /** Sheets with a built paper layout. Other sheet types fall back to the standard tabs. */
 export const LAYOUTS: Record<number, SheetLayout> = {
+  [SHEET.PO]: {
+    kind: "prn",
+    title: "PRN (OTC) MEDICATION ADMINISTRATION RECORD (MAR)",
+    corner: "Alpha House Detox",
+    substanceHint: "",
+    instructionsLabel: "INSTRUCTIONS:",
+    footer: ["Chart each dose given: TIME / AMOUNT / INITIAL, and why it was needed."],
+    slotsPerRow: 5,
+  },
   [SHEET.MK]: {
     ...MAINTENANCE,
     title: "METHADONE/KADIAN MAINTENANCE MEDICATION",

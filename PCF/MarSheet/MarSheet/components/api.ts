@@ -1,5 +1,5 @@
 // Data access for the MAR Sheet control (Dataverse Web API via context.webAPI).
-import { ClientInfo, DOSE_UNITS, DayRow, DoseRow, MAR_STATUS, ReconRow, SheetInfo, Staff } from "./types";
+import { ClientInfo, DOSE_UNITS, DayRow, DoseRow, MAR_STATUS, Medication, ReconRow, SheetInfo, Staff } from "./types";
 
 type Rec = Record<string, unknown>;
 
@@ -15,6 +15,10 @@ export interface DoseInput {
   staff?: Staff;
   /** Titration sheets: the cp_marday record for the dose's date, if one exists. */
   dayId?: string;
+  /** PRN-style sheets. Only written when the key is present, so other sheets never clear them. */
+  amount?: number;
+  notes?: string;
+  medicationId?: string;
 }
 export interface ReconInput {
   at: Date;
@@ -51,7 +55,7 @@ export class MarApi {
       "cp_marsheet",
       id,
       "?$select=cp_sheettype,cp_medication,cp_dose,cp_doseunit,cp_frequency,cp_startdate,cp_enddate,cp_substancehistory," +
-        "cp_instructions,cp_marstatus,cp_refusalcount,_cp_admission_value" +
+        "cp_instructions,cp_marstatus,cp_refusalcount,cp_po_contraindications,_cp_admission_value" +
         "&$expand=cp_Admission($select=cp_detoxfile,cp_allergies,cr6ca_ahcnumber;" +
         "$expand=cp_Client($select=fullname,cp_dateofbirth,birthdate),cp_Bed($select=cp_name))"
     )) as Rec;
@@ -79,6 +83,7 @@ export class MarApi {
       instructions: str(r.cp_instructions),
       status: MAR_STATUS[Number(r.cp_marstatus)],
       refusalCount: num(r.cp_refusalcount) ?? 0,
+      contraindications: str(r.cp_po_contraindications),
       admissionId: str(r._cp_admission_value),
       client,
     };
@@ -87,12 +92,17 @@ export class MarApi {
   async loadDoses(sheetId: string): Promise<DoseRow[]> {
     const res = await this.web.retrieveMultipleRecords(
       "cp_medicationadministration",
-      "?$select=cp_administeredon,cp_dose,cp_count,cp_count2mg,cp_count8mg,cp_bp,cp_hr" +
+      "?$select=cp_administeredon,cp_dose,cp_count,cp_count2mg,cp_count8mg,cp_bp,cp_hr,cp_amount,cp_notes" +
         `&$filter=_cp_marsheet_value eq ${sheetId} and statecode eq 0` +
-        "&$orderby=cp_administeredon asc&$expand=cp_Staff($select=cp_staffid,cp_name,cp_initials)",
+        "&$orderby=cp_administeredon asc&$expand=cp_Staff($select=cp_staffid,cp_name,cp_initials)," +
+        "cp_DetoxMedication($select=cp_detoxmedicationid,cp_name)",
       5000
     );
     return res.entities.map((e: Rec) => ({
+      amount: num(e.cp_amount),
+      notes: str(e.cp_notes),
+      medicationId: str(((e.cp_DetoxMedication ?? {}) as Rec).cp_detoxmedicationid),
+      medicationName: str(((e.cp_DetoxMedication ?? {}) as Rec).cp_name),
       id: String(e.cp_medicationadministrationid),
       at: new Date(String(e.cp_administeredon)),
       dose: num(e.cp_dose),
@@ -164,6 +174,9 @@ export class MarApi {
     };
     if (v.staff) body["cp_Staff@odata.bind"] = `/cp_staffs(${v.staff.id})`;
     if (v.dayId) body["cp_MARDay@odata.bind"] = `/cp_mardaies(${v.dayId})`;
+    if ("amount" in v) body.cp_amount = v.amount ?? null;
+    if ("notes" in v) body.cp_notes = v.notes ?? null;
+    if (v.medicationId) body["cp_DetoxMedication@odata.bind"] = `/cp_detoxmedications(${v.medicationId})`;
     if (v.id) {
       await this.web.updateRecord("cp_medicationadministration", v.id, body);
       return;
@@ -196,6 +209,26 @@ export class MarApi {
     body.cp_sheettype = sheet.sheetType;
     if (sheet.admissionId) body["cp_Admission@odata.bind"] = `/cp_cp_admissions(${sheet.admissionId})`;
     await this.web.createRecord("cp_medicationreconciliation", body);
+  }
+
+  /** Active rows of the cp_detoxmedication list, in sheet order. */
+  async loadMedications(): Promise<Medication[]> {
+    const res = await this.web.retrieveMultipleRecords(
+      "cp_detoxmedication",
+      "?$select=cp_name,cp_strength,cp_directions,cp_maxdailyamount,cp_maxdailyunit,cp_prnotc,cp_displayorder" +
+        "&$filter=statecode eq 0&$orderby=cp_displayorder asc,cp_name asc",
+      500
+    );
+    return res.entities.map((e: Rec) => ({
+      id: String(e.cp_detoxmedicationid),
+      name: str(e.cp_name) ?? "",
+      strength: str(e.cp_strength),
+      directions: str(e.cp_directions),
+      maxDaily: num(e.cp_maxdailyamount),
+      maxUnit: e.cp_maxdailyunit === 121570001 ? "tabs" : e.cp_maxdailyunit === 121570000 ? "mg" : undefined,
+      prn: e.cp_prnotc === true,
+      order: num(e.cp_displayorder),
+    }));
   }
 
   async loadDays(sheetId: string): Promise<DayRow[]> {

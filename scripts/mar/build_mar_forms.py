@@ -165,13 +165,16 @@ VIEW_COLUMNS = {
     "cp_marday": ([("cp_name", 110), ("cp_daynumber", 80), ("cp_daydate", 110), ("cp_dayinstruction", 250),
                    ("cp_daystart", 140), ("cp_daystop", 140)], "cp_daynumber", False),
     "cp_medicationadministration": ([("cp_name", 110), ("cp_administeredon", 150), ("cp_sheettype", 200),
-                                     ("cp_dose", 80), ("cp_amount", 80), ("cp_count", 70), ("cp_count2mg", 80),
+                                     ("cp_detoxmedication", 180), ("cp_dose", 80), ("cp_amount", 80), ("cp_count", 70), ("cp_count2mg", 80),
                                      ("cp_count8mg", 80), ("cp_bp", 80), ("cp_hr", 60), ("cp_staff", 120),
                                      ("cp_notes", 200)], "cp_administeredon", True),
     "cp_medicationreconciliation": ([("cp_name", 110), ("cp_reconciledon", 150), ("cp_count", 70),
                                      ("cp_count2mg", 80), ("cp_count8mg", 80), ("cp_isrefusal", 80),
                                      ("cp_reason", 220), ("cp_staff1", 120), ("cp_staff2", 120)],
                                     "cp_reconciledon", True),
+    "cp_detoxmedication": ([("cp_name", 260), ("cp_strength", 200), ("cp_maxdailyamount", 110),
+                            ("cp_maxdailyunit", 100), ("cp_prnotc", 110), ("cp_displayorder", 100)],
+                           "cp_displayorder", False),
 }
 
 
@@ -296,8 +299,16 @@ def step_forms(assoc):
             ("cp_marsheet", "cp_sheettype"), ("cp_administeredon", "cp_staff"), ("cp_dose", "cp_amount"),
             ("cp_count", "cp_bp"), ("cp_count2mg", "cp_hr"), ("cp_count8mg", "cp_marday"), ("cp_notes",)], t),
         section("ma_insulin", "Insulin Injection Log only", [("cp_ii_bglevel", "cp_ii_injectionsite")], t),
-        section("ma_prn", "PRN (OTC) only", [("cp_po_medication", None)], t),
+        section("ma_prn", "PRN (OTC) only", [("cp_detoxmedication", None)], t),
         section("ma_admin", "Record", [("cp_admission", "cp_name"), ("ownerid", None)], t)])]))
+
+    # medication list (organization-owned, so no Owner field)
+    t = "cp_detoxmedication"
+    upsert_form(t, 2, "Detox Medication", form([tab("dm_tab", "Medication", [
+        section("dm_main", "Medication", [
+            ("cp_name",), ("cp_strength", "cp_displayorder"), ("cp_maxdailyamount", "cp_maxdailyunit"),
+            ("cp_prnotc", None), ("cp_directions",)], t)])]),
+        description="A medication nurses can chart on MAR sheets.")
 
     t = "cp_medicationreconciliation"
     upsert_form(t, 2, "Medication Reconciliation", form([tab("mr_tab", "Reconciliation", [
@@ -350,7 +361,7 @@ def step_publish():
     print("== Publish")
     ents = "".join(f"<entity>{t}</entity>" for t in
                    ["cp_marsheet", "cp_marday", "cp_medicationadministration",
-                    "cp_medicationreconciliation", "cp_cp_admission"])
+                    "cp_medicationreconciliation", "cp_cp_admission", "cp_detoxmedication"])
     call("POST", "PublishXml", {"ParameterXml": f"<importexportxml><entities>{ents}</entities></importexportxml>"})
     print("   published")
 

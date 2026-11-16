@@ -129,6 +129,28 @@ TABLES = [
      "One dose row on a MAR sheet.", "MA"),
     ("cp_MedicationReconciliation", "Medication Reconciliation", "Medication Reconciliations",
      "Evening/night medication count for a MAR sheet, including refusals; two staff sign-offs.", "MR"),
+    ("cp_DetoxMedication", "Detox Medication", "Detox Medications",
+     "Medication list used on MAR sheets (e.g. the PRN (OTC) sheet). Nurses can add medications here.", None),
+]
+
+# Per-table overrides: the medication list is a shared reference list (organization-owned)
+# whose name is the medication itself, so no auto-number and the name is required.
+TABLE_OPTIONS = {
+    "cp_DetoxMedication": {"ownership": "OrganizationOwned", "name_label": "Medication", "name_required": True},
+}
+
+DETOX_APP_ID = "3dc6e19a-3e04-417c-8ab7-edae6be2f759"   # "Detox" model-driven app
+APP_TABLES = ["cp_detoxmedication"]                      # tables nurses open directly from the app
+
+# Seed rows for cp_detoxmedication: the medications printed on the PRN (OTC) paper sheet.
+# name, strength, directions, max per day, max unit (0 = mg, 1 = tabs), PRN list, display order
+SEED_MEDICATIONS = [
+    ("Ibuprofen (Advil)", "200 mg / 400 mg",
+     "Please circle if 200 or 400 mg. MAX 2400 mg/day.", 2400, 0, True, 10),
+    ("Acetaminophen (Tylenol)", "500 mg",
+     "Take 1-2 tabs q4h PRN. DO NOT EXCEED 6 TABS/day.", 6, 1, True, 20),
+    ("Ginger Gravol (Organic Ginger extract)", "20 mg (equivalent to 340 mg dried ginger)",
+     "2 tabs q4-6h PRN. DO NOT EXCEED 6 TABS/day.", 6, 1, True, 30),
 ]
 
 
@@ -248,6 +270,15 @@ COLUMNS = {
         yesno("cp_IsRefusal", "Refusal", "Yes when this entry records a refused medication."),
         memo("cp_Reason", "Reason / Refusal / Why", 2000),
     ],
+    "cp_detoxmedication": [
+        s("cp_Strength", "Strength", 200, "e.g. 200 mg / 400 mg"),
+        memo("cp_Directions", "Directions", 1000, "As printed on the sheet, e.g. Take 1-2 tabs q4h PRN."),
+        dec("cp_MaxDailyAmount", "Max Daily Amount", 2, "Maximum per day, in the Max Daily Unit."),
+        choice("cp_MaxDailyUnit", "Max Daily Unit", ["mg", "tabs"],
+               "mg = checked against Dose; tabs = checked against Amount."),
+        yesno("cp_PRNOTC", "PRN (OTC) list", "Show this medication on the PRN (OTC) MAR sheet."),
+        whole("cp_DisplayOrder", "Display Order", "Order on the sheet (lowest first)."),
+    ],
 }
 
 RESTRICT = "Restrict"
@@ -272,6 +303,10 @@ RELATIONSHIPS = [
      "cp_Staff1", "Staff 1", False, REMOVE),
     ("cp_staff_cp_medicationreconciliation_staff2", "cp_staff", "cp_medicationreconciliation",
      "cp_Staff2", "Staff 2", False, REMOVE),
+    # PRN (OTC) and other list-driven sheets: which medication a dose was. A medication that
+    # has been charted cannot be deleted (deactivate it instead).
+    ("cp_detoxmedication_cp_medicationadministration", "cp_detoxmedication", "cp_medicationadministration",
+     "cp_DetoxMedication", "Medication", False, RESTRICT),
 ]
 
 
@@ -296,20 +331,24 @@ def step_tables():
         if exists(f"EntityDefinitions(LogicalName='{logical}')?$select=LogicalName"):
             print(f"   {logical}: exists")
             continue
+        opt = TABLE_OPTIONS.get(schema, {})
+        name_attr = {
+            "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+            "SchemaName": "cp_Name", "DisplayName": label(opt.get("name_label", "Name")), "IsPrimaryName": True,
+            "RequiredLevel": req("ApplicationRequired" if opt.get("name_required") else "None"),
+            "MaxLength": 200 if opt.get("name_required") else 100, "FormatName": {"Value": "Text"},
+        }
+        if prefix:
+            name_attr["AutoNumberFormat"] = prefix + "-{SEQNUM:6}"
         call("POST", "EntityDefinitions", {
             "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata",
             "SchemaName": schema, "DisplayName": label(disp), "DisplayCollectionName": label(plural),
-            "Description": label(desc), "OwnershipType": "UserOwned",
+            "Description": label(desc), "OwnershipType": opt.get("ownership", "UserOwned"),
             "HasActivities": False, "HasNotes": False, "IsActivity": False,
             "IsAuditEnabled": {"Value": True, "CanBeChanged": True,
                                "ManagedPropertyLogicalName": "canmodifyauditsettings"},
             "PrimaryNameAttribute": "cp_name",
-            "Attributes": [{
-                "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-                "SchemaName": "cp_Name", "DisplayName": label("Name"), "IsPrimaryName": True,
-                "RequiredLevel": req("None"), "MaxLength": 100, "FormatName": {"Value": "Text"},
-                "AutoNumberFormat": prefix + "-{SEQNUM:6}",
-            }]})
+            "Attributes": [name_attr]})
         print(f"   {logical}: created")
 
 
@@ -349,6 +388,35 @@ def step_relationships():
         print(f"   {name}: created ({many}.{lookup.lower()} -> {one}, delete={delete})")
 
 
+def step_app_components():
+    print("== Detox app: add tables")
+    for t in APP_TABLES:
+        mid = call("GET", f"EntityDefinitions(LogicalName='{t}')?$select=MetadataId")["MetadataId"]
+        have = call("GET", f"appmodulecomponents?$select=objectid&$filter=_appmoduleidunique_value ne null "
+                           f"and objectid eq {mid} and componenttype eq 1")["value"]
+        if have:
+            print(f"   {t}: already in app")
+            continue
+        call("POST", "AddAppComponents", {
+            "AppId": DETOX_APP_ID,
+            "Components": [{"@odata.type": "Microsoft.Dynamics.CRM.entity", "entityid": mid}]})
+        print(f"   {t}: added")
+
+
+def step_seed_medications():
+    print("== Seed cp_detoxmedication")
+    for name, strength, directions, max_amt, unit_idx, prn, order in SEED_MEDICATIONS:
+        safe = name.replace("'", "''")
+        if call("GET", f"cp_detoxmedications?$select=cp_name&$filter=cp_name eq '{safe}'")["value"]:
+            print(f"   {name}: exists")
+            continue
+        call("POST", "cp_detoxmedications", {
+            "cp_name": name, "cp_strength": strength, "cp_directions": directions,
+            "cp_maxdailyamount": max_amt, "cp_maxdailyunit": OPT + unit_idx,
+            "cp_prnotc": prn, "cp_displayorder": order})
+        print(f"   {name}: created")
+
+
 def step_publish():
     print("== Publish")
     ents = "".join(f"<entity>{t[0].lower()}</entity>" for t in TABLES) + "<entity>cp_cp_admission</entity><entity>cp_staff</entity>"
@@ -367,4 +435,8 @@ if __name__ == "__main__":
     print("   waiting 20s for metadata to settle"); time.sleep(20)
     step_relationships()
     step_publish()
+    step_app_components()
+    step_seed_medications()
+    call("POST", "PublishXml", {"ParameterXml":
+         f"<importexportxml><appmodules><appmodule>{DETOX_APP_ID}</appmodule></appmodules></importexportxml>"})
     print("Done.")

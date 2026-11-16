@@ -1,8 +1,9 @@
 import * as React from "react";
 import { MarApi, errorText } from "./api";
 import { DailyBoxSheet } from "./DailyBoxSheet";
-import { fmtDateOnly } from "./dates";
-import { DayRow, DoseRow, LAYOUTS, ReconRow, SHEET_LABELS, SheetInfo, Staff } from "./types";
+import { PrnSheet } from "./PrnSheet";
+import { fmtDateOnly, parseDateOnly } from "./dates";
+import { DayRow, DoseRow, LAYOUTS, Medication, ReconRow, SHEET_LABELS, SheetInfo, Staff } from "./types";
 
 export interface MarSheetAppProps {
   api: MarApi;
@@ -10,6 +11,8 @@ export interface MarSheetAppProps {
   userId: string;
   readOnly: boolean;
   width: number;
+  /** Opens a new Detox Medication record (PRN sheet "+ Add a medication to the list"). */
+  onAddMedication?: () => void;
 }
 
 interface Data {
@@ -17,9 +20,10 @@ interface Data {
   doses: DoseRow[];
   recons: ReconRow[];
   days: DayRow[];
+  meds: Medication[];
 }
 
-export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, readOnly, width }) => {
+export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, readOnly, width, onAddMedication }) => {
   const [data, setData] = React.useState<Data>();
   const [me, setMe] = React.useState<Staff>();
   const [meChecked, setMeChecked] = React.useState(false);
@@ -30,13 +34,14 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
     if (!sheetId) return;
     setLoading(true);
     try {
-      const [sheet, doses, recons, days] = await Promise.all([
+      const [sheet, doses, recons, days, meds] = await Promise.all([
         api.loadSheet(sheetId),
         api.loadDoses(sheetId),
         api.loadRecons(sheetId),
         api.loadDays(sheetId),
+        api.loadMedications(),
       ]);
-      setData({ sheet, doses, recons, days });
+      setData({ sheet, doses, recons, days, meds });
       setError(undefined);
     } catch (e) {
       setError(errorText(e));
@@ -78,6 +83,9 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
 
   const { sheet } = data;
   const layout = LAYOUTS[sheet.sheetType];
+  const isPrn = layout?.kind === "prn";
+  const start = parseDateOnly(sheet.startDate);
+  const monthYear = start ? start.toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "";
   const c = sheet.client;
   const title = layout?.title ?? (SHEET_LABELS[sheet.sheetType] ?? "MAR").toUpperCase();
 
@@ -121,18 +129,33 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
             Bed # <b>{c.bed ?? "____"}</b>
           </div>
           <div className="mar-presc">
-            <div>Medication <b>{sheet.medication ?? ""}</b></div>
-            <div>Dose: <b>{sheet.dose ?? ""}{sheet.doseUnit && sheet.dose && !/[a-z]/i.test(sheet.dose) ? ` ${sheet.doseUnit}` : ""}</b></div>
-            {sheet.frequency && <div>Frequency: <b>{sheet.frequency}</b></div>}
-            <div>DATE: <b>{fmtDateOnly(sheet.startDate)}{sheet.endDate ? ` – ${fmtDateOnly(sheet.endDate)}` : ""}</b></div>
+            {isPrn ? (
+              <div>Month/Year: <b>{monthYear}</b></div>
+            ) : (
+              <>
+                <div>Medication <b>{sheet.medication ?? ""}</b></div>
+                <div>Dose: <b>{sheet.dose ?? ""}{sheet.doseUnit && sheet.dose && !/[a-z]/i.test(sheet.dose) ? ` ${sheet.doseUnit}` : ""}</b></div>
+                {sheet.frequency && <div>Frequency: <b>{sheet.frequency}</b></div>}
+                <div>DATE: <b>{fmtDateOnly(sheet.startDate)}{sheet.endDate ? ` – ${fmtDateOnly(sheet.endDate)}` : ""}</b></div>
+              </>
+            )}
             <div>Allergies: <b className={c.allergies ? "mar-allergy" : ""}>{c.allergies ?? ""}</b></div>
           </div>
         </div>
-        <div className="mar-substance">
-          Substance History: <b>{sheet.substanceHistory ?? ""}</b> <span className="mar-hint">{layout?.substanceHint ?? "(TYPE OF OPIATE / LAST USE)"}</span>
-        </div>
+        {isPrn ? (
+          <div className="mar-substance">
+            Medical conditions that are contraindicated with PRN (OTC) Medications: <b>{sheet.contraindications ?? ""}</b>
+          </div>
+        ) : (
+          <div className="mar-substance">
+            Substance History: <b>{sheet.substanceHistory ?? ""}</b> <span className="mar-hint">{layout?.substanceHint ?? "(TYPE OF OPIATE / LAST USE)"}</span>
+          </div>
+        )}
 
-        {layout ? (
+        {layout?.kind === "prn" ? (
+          <PrnSheet api={api} sheet={sheet} layout={layout} doses={data.doses} meds={data.meds} me={me}
+            readOnly={readOnly} reload={load} onAddMedication={onAddMedication} />
+        ) : layout ? (
           <DailyBoxSheet api={api} sheet={sheet} layout={layout} doses={data.doses} recons={data.recons} days={data.days} me={me}
             readOnly={readOnly} stacked={width > 0 && width < 1100} reload={load} />
         ) : (

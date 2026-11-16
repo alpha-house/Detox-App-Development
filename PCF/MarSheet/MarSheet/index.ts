@@ -28,6 +28,9 @@ export class MarSheet implements ComponentFramework.ReactControl<IInputs, IOutpu
       userId: context.userSettings.userId,
       readOnly: context.mode.isControlDisabled,
       width: context.mode.allocatedWidth,
+      onAddMedication: () => {
+        void context.navigation.openForm({ entityName: "cp_detoxmedication", openInNewWindow: false });
+      },
     };
     // key: remount when the form moves from "new" to a saved record
     return React.createElement(MarSheetApp, { ...props, key: id ?? "new" });
