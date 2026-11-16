@@ -62,6 +62,11 @@
 .mar-box-instr-edit { display: flex; flex-direction: column; gap: 3px; background: #eef5fc; }
 .mar-box-instr-edit textarea { resize: vertical; }
 .mar-instr-actions { text-align: right; }
+/* taper sheets: DAY ONE… headings, pre-printed instructions, START / STOP, no-dose boxes */
+.mar-box-subdate { font-size: 11px; color: #555; }
+.mar-box-instr-fixed { font-weight: 700; min-height: 26px; }
+.mar-box-startstop { display: flex; flex-wrap: wrap; gap: 2px 12px; padding: 3px 4px; border-bottom: 1px solid var(--rule); font-size: 12px; }
+.mar-box-nodose { min-height: 120px; }
 .mar-tag { margin-left: 6px; font-size: 10px; padding: 0 5px; border-radius: 8px; background: var(--accent); color: #fff; }
 .mar-tag-warn { background: #c19c00; }
 
@@ -123,6 +128,8 @@
 .mar-recon .mar-table th:nth-child(3), .mar-recon .mar-table td:nth-child(3) { width: 36px; }
 .mar-recon .mar-table th:nth-child(5), .mar-recon .mar-table td:nth-child(5),
 .mar-recon .mar-table th:nth-child(6), .mar-recon .mar-table td:nth-child(6) { width: 52px; }
+/* reconciliation headed "COUNT" (8-day benzo taper) instead of "#": a little more room */
+.mar-recon .mar-table.mar-wide-count th:nth-child(3), .mar-recon .mar-table.mar-wide-count td:nth-child(3) { width: 48px; }
 /* Suboxone reconciliation: DATE TIME 2 8 REASON ID ID - tighter columns so REASON keeps room */
 .mar-recon .mar-table.mar-split th:nth-child(1), .mar-recon .mar-table.mar-split td:nth-child(1) { width: 50px; }
 .mar-recon .mar-table.mar-split th:nth-child(2), .mar-recon .mar-table.mar-split td:nth-child(2) { width: 44px; }

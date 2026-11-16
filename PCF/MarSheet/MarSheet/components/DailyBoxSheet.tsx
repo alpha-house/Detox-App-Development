@@ -4,8 +4,12 @@ import {
   addDays,
   combine,
   dateInputValue,
+  dateTimeInputValue,
   dayKey,
+  dayWord,
   diffDays,
+  fmtDayMonthTime,
+  parseDateTimeInput,
   fmtBoxDate,
   fmtShortDate,
   fmtTime,
@@ -123,30 +127,46 @@ export const DailyBoxSheet: React.FC<Props> = (p) => {
             const td = rows.reduce((s, r) => s + (r.dose ?? 0), 0);
             const addingHere = editing?.kind === "dose" && editing.day === k && !editing.id;
             const fillers = Math.max(0, layout.minRows - rows.length - (canAddDose && !isFuture ? 1 : 0));
+            const idx = diffDays(anchor, day);
+            const fixed = layout.fixedInstructions?.[idx];
+            // "STOP TAPER" style boxes have no dose table on paper - unless doses were charted there
+            const noDoseBox = !!layout.noDoseDays?.includes(idx) && rows.length === 0;
+            const saveDay = (fields: { instruction?: string | null; start?: Date | null; stop?: Date | null }) =>
+              run(async () => {
+                await p.api.saveDay(sheet, { id: dayByKey.get(k)?.id, date: k, dayNumber: idx + 1, ...fields });
+              });
             return (
               <div key={k} className={"mar-box" + (k === dayKey(today) ? " mar-box-today" : "") + (isFuture ? " mar-box-future" : "")}>
                 <div className="mar-box-date">
-                  DATE: <b>{fmtBoxDate(day)}</b>
+                  {layout.dayLabels ? (
+                    <>
+                      DAY <b>{dayWord(idx)}</b>: <span className="mar-box-subdate">{fmtBoxDate(day)}</span>
+                    </>
+                  ) : (
+                    <>
+                      DATE: <b>{fmtBoxDate(day)}</b>
+                    </>
+                  )}
                   {k === dayKey(today) && <span className="mar-tag">Today</span>}
                   {afterEnd && <span className="mar-tag mar-tag-warn">After script end</span>}
                 </div>
-                {layout.dayInstructions && (
-                  <DayInstruction
-                    day={dayByKey.get(k)}
-                    editable={!p.readOnly}
-                    busy={busy}
-                    onSave={(text) =>
-                      run(async () => {
-                        await p.api.saveDay(sheet, {
-                          id: dayByKey.get(k)?.id,
-                          date: k,
-                          dayNumber: diffDays(anchor, day) + 1,
-                          instruction: text,
-                        });
-                      })
-                    }
-                  />
+                {fixed ? (
+                  <div className="mar-box-instr mar-box-instr-fixed">
+                    <span className="mar-instr-text">{fixed}</span>
+                  </div>
+                ) : (
+                  layout.dayInstructions && (
+                    <DayInstruction day={dayByKey.get(k)} editable={!p.readOnly} busy={busy}
+                      onSave={(text) => saveDay({ instruction: text ?? null })} />
+                  )
                 )}
+                {layout.startStop && !noDoseBox && (
+                  <DayStartStop day={dayByKey.get(k)} boxDay={day} editable={!p.readOnly} busy={busy}
+                    onSave={(start, stop) => saveDay({ start: start ?? null, stop: stop ?? null })} />
+                )}
+                {noDoseBox ? (
+                  <div className="mar-box-nodose" />
+                ) : (
                 <table className={"mar-table" + (split ? " mar-split" : "")}>
                   <thead>
                     <tr>
@@ -209,6 +229,7 @@ export const DailyBoxSheet: React.FC<Props> = (p) => {
                     </tr>
                   </tfoot>
                 </table>
+                )}
               </div>
             );
           })}
@@ -259,6 +280,64 @@ const DayInstruction: React.FC<DayInstructionProps> = ({ day, editable, busy, on
       title={editable ? "Tap to edit the day's instruction" : undefined}>
       <span className="mar-field-label">INSTRUCTION:</span>{" "}
       {day?.instruction ? <span className="mar-instr-text">{day.instruction}</span> : editable ? <span className="mar-instr-add">+ Add instruction</span> : null}
+    </div>
+  );
+};
+
+// ------------------------------------------------------------------ START / STOP (taper sheets)
+interface DayStartStopProps {
+  day?: DayRow;
+  boxDay: Date;
+  editable: boolean;
+  busy: boolean;
+  onSave: (start: Date | undefined, stop: Date | undefined) => Promise<void>;
+}
+
+const DayStartStop: React.FC<DayStartStopProps> = ({ day, boxDay, editable, busy, onSave }) => {
+  const [editing, setEditing] = React.useState(false);
+  const [start, setStart] = React.useState("");
+  const [stop, setStop] = React.useState("");
+  const [msg, setMsg] = React.useState<string>();
+
+  const open = () => {
+    // start defaults to now on today's box, otherwise 08:00 that day
+    const isToday = dayKey(boxDay) === dayKey(new Date());
+    const dflt = isToday ? new Date() : new Date(boxDay.getFullYear(), boxDay.getMonth(), boxDay.getDate(), 8, 0);
+    setStart(dateTimeInputValue(day?.start ?? dflt));
+    setStop(day?.stop ? dateTimeInputValue(day.stop) : "");
+    setMsg(undefined);
+    setEditing(true);
+  };
+
+  if (editing) {
+    const save = async () => {
+      const s = start ? parseDateTimeInput(start) : undefined;
+      const e = stop ? parseDateTimeInput(stop) : undefined;
+      if (start && !s) return setMsg("Enter a valid start.");
+      if (stop && !e) return setMsg("Enter a valid stop.");
+      if (s && e && e < s) return setMsg("Stop is before start.");
+      await onSave(s, e);
+      setEditing(false);
+    };
+    return (
+      <div className="mar-box-instr mar-box-instr-edit">
+        <div className="mar-editor">
+          <Field label="START"><input className="mar-input" type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} /></Field>
+          <Field label="STOP"><input className="mar-input" type="datetime-local" value={stop} onChange={(e) => setStop(e.target.value)} /></Field>
+        </div>
+        <div className="mar-instr-actions">
+          {msg && <span className="mar-msg">{msg}</span>}
+          <button type="button" className="mar-btn" disabled={busy} onClick={() => setEditing(false)}>Cancel</button>
+          <button type="button" className="mar-btn mar-btn-primary" disabled={busy} onClick={() => void save()}>{busy ? "Saving…" : "Save"}</button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={"mar-box-startstop" + (editable ? " mar-row-click" : "")} onClick={() => editable && !busy && open()}
+      title={editable ? "Tap to set START / STOP" : undefined}>
+      <span>START: <b>{day?.start ? fmtDayMonthTime(day.start) : "__/__ __:__"}</b></span>
+      <span>STOP: <b>{day?.stop ? fmtDayMonthTime(day.stop) : "__/__ __:__"}</b></span>
     </div>
   );
 };
@@ -365,7 +444,7 @@ const ReconPanel: React.FC<ReconPanelProps> = (p) => {
       <div className="mar-recon-title">
         MEDICATION RECONCILIATION <span>– TO BE DONE ONCE DAILY ON EVENING/NIGHTS</span>
       </div>
-      <table className={"mar-table" + (split ? " mar-split" : "")}>
+      <table className={"mar-table" + (split ? " mar-split" : layout.reconCountLabel.length > 2 ? " mar-wide-count" : "")}>
         <thead>
           <tr>
             <th>DATE</th>

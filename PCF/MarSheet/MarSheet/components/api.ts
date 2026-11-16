@@ -201,7 +201,7 @@ export class MarApi {
   async loadDays(sheetId: string): Promise<DayRow[]> {
     const res = await this.web.retrieveMultipleRecords(
       "cp_marday",
-      `?$select=cp_daydate,cp_daynumber,cp_dayinstruction&$filter=_cp_marsheet_value eq ${sheetId} and statecode eq 0&$orderby=cp_daydate asc`,
+      `?$select=cp_daydate,cp_daynumber,cp_dayinstruction,cp_daystart,cp_daystop&$filter=_cp_marsheet_value eq ${sheetId} and statecode eq 0&$orderby=cp_daydate asc`,
       500
     );
     return res.entities
@@ -210,13 +210,22 @@ export class MarApi {
         date: (str(e.cp_daydate) ?? "").substring(0, 10),
         dayNumber: num(e.cp_daynumber),
         instruction: str(e.cp_dayinstruction),
+        start: str(e.cp_daystart) ? new Date(String(e.cp_daystart)) : undefined,
+        stop: str(e.cp_daystop) ? new Date(String(e.cp_daystop)) : undefined,
       }))
       .filter((d) => d.date);
   }
 
-  /** Create or update the day box's instruction (one cp_marday per sheet + date). */
-  async saveDay(sheet: SheetInfo, v: { id?: string; date: string; dayNumber: number; instruction?: string }): Promise<string> {
-    const body: Rec = { cp_dayinstruction: v.instruction ?? null, cp_daynumber: v.dayNumber };
+  /** Create or update a day box's record (one cp_marday per sheet + date). Only the
+   *  fields passed are written, so saving START/STOP never clears the instruction. */
+  async saveDay(
+    sheet: SheetInfo,
+    v: { id?: string; date: string; dayNumber: number; instruction?: string | null; start?: Date | null; stop?: Date | null }
+  ): Promise<string> {
+    const body: Rec = { cp_daynumber: v.dayNumber };
+    if (v.instruction !== undefined) body.cp_dayinstruction = v.instruction;
+    if (v.start !== undefined) body.cp_daystart = v.start ? v.start.toISOString() : null;
+    if (v.stop !== undefined) body.cp_daystop = v.stop ? v.stop.toISOString() : null;
     if (v.id) {
       await this.web.updateRecord("cp_marday", v.id, body);
       return v.id;

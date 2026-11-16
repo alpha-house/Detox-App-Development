@@ -37,6 +37,23 @@ export function combine(day: Date, hhmm: string): Date | undefined {
   return new Date(day.getFullYear(), day.getMonth(), day.getDate(), Number(m[1]), Number(m[2]));
 }
 
+/** START/STOP as the paper legend asks: DAY/MONTH/TIME, e.g. "16/Nov 08:00". */
+export const fmtDayMonthTime = (d: Date) =>
+  `${d.getDate()}/${d.toLocaleDateString(undefined, { month: "short" })} ${fmtTime(d)}`;
+
+/** Value for <input type="datetime-local"> in local time. */
+export const dateTimeInputValue = (d: Date) => `${dayKey(d)}T${fmtTime(d)}`;
+
+/** Parse an <input type="datetime-local"> value as local time. */
+export function parseDateTimeInput(s: string): Date | undefined {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(s);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5])) : undefined;
+}
+
+const DAY_WORDS = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE", "TEN", "ELEVEN", "TWELVE"];
+/** 0-based day index -> "ONE", "TWO", … (falls back to the number). */
+export const dayWord = (i: number) => DAY_WORDS[i] ?? String(i + 1);
+
 /** Show a DateOnly value as written on paper. */
 export function fmtDateOnly(s?: string): string {
   const d = parseDateOnly(s);

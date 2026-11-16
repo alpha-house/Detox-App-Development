@@ -105,6 +105,8 @@ export interface DayRow {
   date: string; // yyyy-mm-dd (DateOnly)
   dayNumber?: number;
   instruction?: string;
+  start?: Date;
+  stop?: Date;
 }
 
 /** Layout for the "daily box" sheets: DATE boxes of TIME/DOSE/COUNT/ID/BP-HR + TD,
@@ -118,6 +120,15 @@ export interface DailyBoxLayout {
   splitCounts?: boolean;
   /** Titration sheets: each DATE box carries an INSTRUCTION, stored as a cp_marday record. */
   dayInstructions?: boolean;
+  /** Taper sheets: boxes are headed DAY ONE, DAY TWO… (the calendar date is shown small). */
+  dayLabels?: boolean;
+  /** Taper sheets: each day has START / STOP times (cp_daystart / cp_daystop). */
+  startStop?: boolean;
+  /** Pre-printed instruction per day box (index 0 = DAY ONE); replaces the editable one. */
+  fixedInstructions?: string[];
+  /** Day boxes (0-based) that have no dose table on paper, e.g. "STOP TAPER". A table is
+   *  still shown if doses were charted on that day, so nothing recorded is ever hidden. */
+  noDoseDays?: number[];
   showHR: boolean;
   boxesPerPage: number;
   minRows: number;
@@ -190,5 +201,42 @@ export const LAYOUTS: Record<number, SheetLayout> = {
     splitCounts: true,
     instructionsLabel: "ADDED INSTRUCTIONS/NOTES:",
     footer: ["TD = TOTAL DAILY COUNT", REFUSAL_RULE],
+  },
+  [SHEET.BT]: {
+    ...MAINTENANCE,
+    title: "BENZODIAZEPINE TAPER",
+    corner: "Taper Medication Sheet",
+    boxesPerPage: 8,
+    dayLabels: true,
+    dayInstructions: true,
+    startStop: true,
+    substanceHint: "",
+    reconCountLabel: "COUNT",
+    instructionsLabel: "PRESCRIPTION INSTRUCTIONS:",
+    footer: ["Legend: Use DAY/MONTH/TIME for Start and Stop Times", "TD = TOTAL DAILY DOSE", REFUSAL_RULE],
+  },
+  [SHEET.B5]: {
+    ...MAINTENANCE,
+    title: "BENZODIAZEPINE TAPER",
+    corner: "pre-filled 5 Day Taper Medication Sheet",
+    boxesPerPage: 8,
+    dayLabels: true,
+    startStop: true,
+    showHR: false,
+    fixedInstructions: [
+      "TAKE 1 TABLET QID DAILY",
+      "TAKE 1 TABLET QID DAILY",
+      "TAKE 1 TABLET TID DAILY",
+      "TAKE 1 TABLET BID DAILY",
+      "TAKE 1 TABLET OD DAILY",
+      "STOP TAPER — REASSESS IF NEEDED",
+    ],
+    noDoseDays: [5, 6, 7],
+    substanceHint: "(Bev/non-bev/last use) (USE DAY/MONTH/TIME FOR START AND STOP TIMES)",
+    instructionsLabel: "INSTRUCTIONS:",
+    footer: [
+      "LEGEND: TD = TOTAL DAILY DOSE · QID = 4 TIMES A DAY · TID = 3 TIMES A DAY · BID = 2 TIMES A DAY · OD = ONCE A DAY",
+      REFUSAL_RULE,
+    ],
   },
 };
