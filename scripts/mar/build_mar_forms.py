@@ -300,6 +300,9 @@ def step_forms(assoc):
             ("cp_count", "cp_bp"), ("cp_count2mg", "cp_hr"), ("cp_count8mg", "cp_marday"), ("cp_notes",)], t),
         section("ma_insulin", "Insulin Injection Log only", [("cp_ii_bglevel", "cp_ii_injectionsite")], t),
         section("ma_prn", "PRN (OTC) only", [("cp_detoxmedication", None)], t),
+        section("ma_vitals", "Vital Signs only (B.G. uses the Insulin column)", [
+            ("cp_vs_respiratoryrate", "cp_vs_oxygensaturation"), ("cp_vs_temperature", "cp_vs_hcgresult"),
+            ("cp_vs_cowsscore", "cp_vs_ciwascore"), ("cp_vs_drugtestresult", None)], t),
         section("ma_admin", "Record", [("cp_admission", "cp_name"), ("ownerid", None)], t)])]))
 
     # medication list (organization-owned, so no Owner field)

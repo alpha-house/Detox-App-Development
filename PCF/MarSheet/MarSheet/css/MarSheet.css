@@ -162,3 +162,16 @@
 .mar-footer { border-top: 2px solid var(--ink); padding: 6px 8px; }
 .mar-instructions { white-space: pre-wrap; margin: 4px 0; }
 .mar-small { font-size: 11px; font-weight: 600; margin-top: 2px; }
+
+/* Vital Signs, CIWA/COWS, Urine/Blood Testing Results Record */
+.mar-vs-scroll { overflow-x: auto; }
+.mar-vs-table { min-width: 980px; }
+.mar-vs-table th { text-align: center; vertical-align: top; white-space: normal; font-size: 11px; font-weight: 700; line-height: 1.2; border-bottom: 2px solid var(--ink); }
+.mar-vs-table th span { display: block; font-size: 9px; font-weight: 600; }
+.mar-vs-table td { text-align: center; height: 30px; font-size: 13px; }
+.mar-vs-table .mar-vs-date { width: 118px; }
+.mar-vs-table td:first-child { text-align: left; white-space: normal; line-height: 1.2; }
+.mar-vs-table .mar-vs-drug { width: 130px; white-space: normal; }
+.mar-vs-shade { background: #f3f3f3; }
+.mar-vs-intake td { font-style: italic; background: var(--today); }
+.mar-vs-flag { color: var(--err-ink); background: var(--err-bg) !important; font-weight: 700; }

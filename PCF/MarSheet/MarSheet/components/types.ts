@@ -13,6 +13,7 @@ export const SHEET = {
   BT: 121570008, // Benzodiazepine Taper (8-Day)
   B5: 121570009, // Benzodiazepine Taper (Pre-filled 5-Day)
   BM: 121570010, // Benzodiazepine Maintenance
+  VS: 121570011, // Vital Signs
 } as const;
 
 export const SHEET_LABELS: Record<number, string> = {
@@ -27,6 +28,7 @@ export const SHEET_LABELS: Record<number, string> = {
   [SHEET.BT]: "Benzodiazepine Taper (8-Day)",
   [SHEET.B5]: "Benzodiazepine Taper (Pre-filled 5-Day)",
   [SHEET.BM]: "Benzodiazepine Maintenance",
+  [SHEET.VS]: "Vital Signs",
 };
 
 export const DOSE_UNITS: Record<number, string> = {
@@ -74,6 +76,20 @@ export interface SheetInfo {
   contraindications?: string;
   admissionId?: string;
   client: ClientInfo;
+  /** Vital Signs: the readings taken on admission, read from the admission itself
+   *  (Medical1 tab: cp_bp / cp_hr / cp_temp / cp_o2sats; Withdrawal tab: CIWA / COWS Score 1). */
+  intake?: IntakeVitals;
+}
+
+export interface IntakeVitals {
+  at?: Date; // cp_admissiondate
+  bp?: string;
+  hr?: string;
+  temp?: string;
+  o2?: string;
+  ciwa?: number;
+  cows?: number;
+  staff?: Staff; // Staff Completing Medical Portion
 }
 
 export interface DoseRow {
@@ -92,6 +108,14 @@ export interface DoseRow {
   medicationName?: string;
   bg?: number;
   site?: number;
+  /** Vital Signs sheet (cp_vs_*). BP / HR / B.G. use the shared columns above. */
+  rr?: number;
+  o2?: number;
+  temp?: number;
+  cows?: number;
+  ciwa?: number;
+  hcg?: number;
+  drugTest?: string;
 }
 
 export interface ReconRow {
@@ -188,7 +212,26 @@ export const INJECTION_SITES: { value: number; label: string; short: string }[] 
 /** BG below this (mmol/L) is shown as low. */
 export const LOW_BG = 4.0;
 
-export type SheetLayout = DailyBoxLayout | PrnLayout;
+/** Vital Signs, CIWA/COWS, Urine/Blood Testing Results Record: one row per set of readings. */
+export interface VitalsLayout {
+  kind: "vitals";
+  title: string;
+  corner: string;
+  substanceHint: string;
+  instructionsLabel: string;
+  footer: string[];
+  /** Ruled rows on the paper sheet; blank rows pad the table up to this. */
+  minRows: number;
+}
+
+/** cp_vs_hcgresult option values. */
+export const HCG_RESULTS: { value: number; label: string }[] = [
+  { value: 121570000, label: "Negative" },
+  { value: 121570001, label: "Positive" },
+  { value: 121570002, label: "Declined" },
+];
+
+export type SheetLayout = DailyBoxLayout | PrnLayout | VitalsLayout;
 
 /** A row of cp_detoxmedication. */
 export interface Medication {
@@ -223,6 +266,15 @@ const MAINTENANCE: DailyBoxLayout = {
 
 /** Sheets with a built paper layout. Other sheet types fall back to the standard tabs. */
 export const LAYOUTS: Record<number, SheetLayout> = {
+  [SHEET.VS]: {
+    kind: "vitals",
+    title: "Vital Signs, CIWA/COWS, Urine/Blood Testing Results Record",
+    corner: "Alpha House",
+    substanceHint: "",
+    instructionsLabel: "",
+    footer: ["Drug Test Result: indicate positive results only. B.G. = blood glucose (mmol/L)."],
+    minRows: 13,
+  },
   [SHEET.PO]: {
     kind: "prn",
     title: "PRN (OTC) MEDICATION ADMINISTRATION RECORD (MAR)",

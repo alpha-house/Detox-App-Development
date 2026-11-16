@@ -117,6 +117,7 @@ SHEET_TYPES = [
     "Benzodiazepine Taper (8-Day)",                # BT
     "Benzodiazepine Taper (Pre-filled 5-Day)",     # B5
     "Benzodiazepine Maintenance",                  # BM
+    "Vital Signs",                                 # VS
 ]
 
 TABLES = [
@@ -260,6 +261,18 @@ COLUMNS = {
         choice("cp_PO_Medication", "PO Medication",
                ["Ibuprofen (Advil) 200 mg", "Ibuprofen (Advil) 400 mg",
                 "Acetaminophen (Tylenol) 500 mg", "Ginger Gravol"]),
+        # Vital Signs, CIWA/COWS, Urine/Blood Testing Results Record. BP, HR and the B.G. level
+        # reuse the shared cp_bp / cp_hr / cp_ii_bglevel columns; the admission's own intake
+        # readings (cp_bp, cp_hr, cp_temp, cp_o2sats, cp_ciwascore1, cp_cowsscore1) are read
+        # from the admission, not copied here.
+        whole("cp_VS_RespiratoryRate", "VS Respiratory Rate", "Breaths per minute."),
+        whole("cp_VS_OxygenSaturation", "VS Oxygen Saturation", "SpO2 in %."),
+        dec("cp_VS_Temperature", "VS Temp", 1, "Temperature in degrees C."),
+        whole("cp_VS_COWSScore", "VS COWS Score", "Clinical Opiate Withdrawal Scale score."),
+        whole("cp_VS_CIWAScore", "VS CIWA Score", "CIWA withdrawal score."),
+        choice("cp_VS_HCGResult", "VS HCG Test Result", ["Negative", "Positive", "Declined"]),
+        s("cp_VS_DrugTestResult", "VS Drug Test Result", 300,
+          "Positive results only, e.g. THC, fentanyl."),
     ],
     "cp_medicationreconciliation": [
         sheettype(),
@@ -314,6 +327,12 @@ RELATIONSHIPS = [
 def step_optionset():
     print("== Global choice cp_marsheettype")
     if exists("GlobalOptionSetDefinitions(Name='cp_marsheettype')"):
+        have = {o["Value"] for o in call("GET", "GlobalOptionSetDefinitions(Name='cp_marsheettype')")["Options"]}
+        for i, name in enumerate(SHEET_TYPES):
+            if OPT + i not in have:
+                call("POST", "InsertOptionValue", {"OptionSetName": "cp_marsheettype", "Value": OPT + i,
+                                                   "Label": label(name), "SolutionUniqueName": SOLUTION})
+                print(f"   added {OPT + i} {name}")
         print("   exists")
         return
     call("POST", "GlobalOptionSetDefinitions", {

@@ -1,5 +1,5 @@
 // Data access for the MAR Sheet control (Dataverse Web API via context.webAPI).
-import { ClientInfo, DOSE_UNITS, DayRow, DoseRow, MAR_STATUS, Medication, ReconRow, SheetInfo, Staff } from "./types";
+import { ClientInfo, DOSE_UNITS, IntakeVitals, DayRow, DoseRow, MAR_STATUS, Medication, ReconRow, SheetInfo, Staff } from "./types";
 
 type Rec = Record<string, unknown>;
 
@@ -22,6 +22,14 @@ export interface DoseInput {
   /** Insulin log. Only written when the key is present. */
   bg?: number;
   site?: number;
+  /** Vital Signs. Only written when the key is present. */
+  rr?: number;
+  o2?: number;
+  temp?: number;
+  cows?: number;
+  ciwa?: number;
+  hcg?: number;
+  drugTest?: string;
 }
 export interface ReconInput {
   at: Date;
@@ -59,8 +67,10 @@ export class MarApi {
       id,
       "?$select=cp_sheettype,cp_medication,cp_dose,cp_doseunit,cp_frequency,cp_startdate,cp_enddate,cp_substancehistory," +
         "cp_instructions,cp_marstatus,cp_refusalcount,cp_po_contraindications,_cp_admission_value" +
-        "&$expand=cp_Admission($select=cp_detoxfile,cp_allergies,cr6ca_ahcnumber;" +
-        "$expand=cp_Client($select=fullname,cp_dateofbirth,birthdate),cp_Bed($select=cp_name))"
+        "&$expand=cp_Admission($select=cp_detoxfile,cp_allergies,cr6ca_ahcnumber," +
+        "cp_admissiondate,cp_bp,cp_hr,cp_temp,cp_o2sats,cp_ciwascore1,cp_cowsscore1;" +
+        "$expand=cp_Client($select=fullname,cp_dateofbirth,birthdate),cp_Bed($select=cp_name)," +
+        "cp_StaffCompletingMedicalPortion($select=cp_staffid,cp_name,cp_initials))"
     )) as Rec;
     const adm = (r.cp_Admission ?? {}) as Rec;
     const cl = (adm.cp_Client ?? {}) as Rec;
@@ -72,6 +82,16 @@ export class MarApi {
       fileNo: str(adm.cp_detoxfile),
       bed: str(bed.cp_name),
       allergies: str(adm.cp_allergies),
+    };
+    const intake: IntakeVitals = {
+      at: str(adm.cp_admissiondate) ? new Date(String(adm.cp_admissiondate)) : undefined,
+      bp: str(adm.cp_bp),
+      hr: str(adm.cp_hr),
+      temp: str(adm.cp_temp),
+      o2: str(adm.cp_o2sats),
+      ciwa: num(adm.cp_ciwascore1),
+      cows: num(adm.cp_cowsscore1),
+      staff: toStaff(adm.cp_StaffCompletingMedicalPortion),
     };
     return {
       id,
@@ -89,13 +109,15 @@ export class MarApi {
       contraindications: str(r.cp_po_contraindications),
       admissionId: str(r._cp_admission_value),
       client,
+      intake,
     };
   }
 
   async loadDoses(sheetId: string): Promise<DoseRow[]> {
     const res = await this.web.retrieveMultipleRecords(
       "cp_medicationadministration",
-      "?$select=cp_administeredon,cp_dose,cp_count,cp_count2mg,cp_count8mg,cp_bp,cp_hr,cp_amount,cp_notes,cp_ii_bglevel,cp_ii_injectionsite" +
+      "?$select=cp_administeredon,cp_dose,cp_count,cp_count2mg,cp_count8mg,cp_bp,cp_hr,cp_amount,cp_notes,cp_ii_bglevel,cp_ii_injectionsite," +
+        "cp_vs_respiratoryrate,cp_vs_oxygensaturation,cp_vs_temperature,cp_vs_cowsscore,cp_vs_ciwascore,cp_vs_hcgresult,cp_vs_drugtestresult" +
         `&$filter=_cp_marsheet_value eq ${sheetId} and statecode eq 0` +
         "&$orderby=cp_administeredon asc&$expand=cp_Staff($select=cp_staffid,cp_name,cp_initials)," +
         "cp_DetoxMedication($select=cp_detoxmedicationid,cp_name)",
@@ -104,6 +126,13 @@ export class MarApi {
     return res.entities.map((e: Rec) => ({
       bg: num(e.cp_ii_bglevel),
       site: num(e.cp_ii_injectionsite),
+      rr: num(e.cp_vs_respiratoryrate),
+      o2: num(e.cp_vs_oxygensaturation),
+      temp: num(e.cp_vs_temperature),
+      cows: num(e.cp_vs_cowsscore),
+      ciwa: num(e.cp_vs_ciwascore),
+      hcg: num(e.cp_vs_hcgresult),
+      drugTest: str(e.cp_vs_drugtestresult),
       amount: num(e.cp_amount),
       notes: str(e.cp_notes),
       medicationId: str(((e.cp_DetoxMedication ?? {}) as Rec).cp_detoxmedicationid),
@@ -183,6 +212,13 @@ export class MarApi {
     if ("notes" in v) body.cp_notes = v.notes ?? null;
     if ("bg" in v) body.cp_ii_bglevel = v.bg ?? null;
     if ("site" in v) body.cp_ii_injectionsite = v.site ?? null;
+    if ("rr" in v) body.cp_vs_respiratoryrate = v.rr ?? null;
+    if ("o2" in v) body.cp_vs_oxygensaturation = v.o2 ?? null;
+    if ("temp" in v) body.cp_vs_temperature = v.temp ?? null;
+    if ("cows" in v) body.cp_vs_cowsscore = v.cows ?? null;
+    if ("ciwa" in v) body.cp_vs_ciwascore = v.ciwa ?? null;
+    if ("hcg" in v) body.cp_vs_hcgresult = v.hcg ?? null;
+    if ("drugTest" in v) body.cp_vs_drugtestresult = v.drugTest ?? null;
     if (v.medicationId) body["cp_DetoxMedication@odata.bind"] = `/cp_detoxmedications(${v.medicationId})`;
     if (v.id) {
       await this.web.updateRecord("cp_medicationadministration", v.id, body);

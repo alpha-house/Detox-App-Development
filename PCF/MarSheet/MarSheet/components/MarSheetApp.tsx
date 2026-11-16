@@ -2,6 +2,7 @@ import * as React from "react";
 import { MarApi, errorText } from "./api";
 import { DailyBoxSheet } from "./DailyBoxSheet";
 import { PrnSheet } from "./PrnSheet";
+import { VitalsSheet } from "./VitalsSheet";
 import { fmtDateOnly, parseDateOnly } from "./dates";
 import { DayRow, DoseRow, LAYOUTS, Medication, ReconRow, SHEET_LABELS, SheetInfo, Staff } from "./types";
 
@@ -84,6 +85,7 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
   const { sheet } = data;
   const layout = LAYOUTS[sheet.sheetType];
   const isPrn = layout?.kind === "prn";
+  const isVitals = layout?.kind === "vitals";
   const start = parseDateOnly(sheet.startDate);
   const monthYear = start ? start.toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "";
   const c = sheet.client;
@@ -129,7 +131,7 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
             Bed # <b>{c.bed ?? "____"}</b>
           </div>
           <div className="mar-presc">
-            {isPrn ? (
+            {isVitals ? null : isPrn ? (
               <div>Month/Year: <b>{monthYear}</b></div>
             ) : (
               <>
@@ -142,7 +144,9 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
             <div>Allergies: <b className={c.allergies ? "mar-allergy" : ""}>{c.allergies ?? ""}</b></div>
           </div>
         </div>
-        {layout?.kind === "prn" ? (
+        {layout?.kind === "vitals" ? (
+          <div className="mar-substance-gap" />
+        ) : layout?.kind === "prn" ? (
           layout.contraLine ? (
             <div className="mar-substance">
               Medical conditions that are contraindicated with PRN (OTC) Medications: <b>{sheet.contraindications ?? ""}</b>
@@ -156,7 +160,9 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
           </div>
         )}
 
-        {layout?.kind === "prn" ? (
+        {layout?.kind === "vitals" ? (
+          <VitalsSheet api={api} sheet={sheet} layout={layout} doses={data.doses} me={me} readOnly={readOnly} reload={load} />
+        ) : layout?.kind === "prn" ? (
           <PrnSheet api={api} sheet={sheet} layout={layout} doses={data.doses} meds={data.meds} me={me}
             readOnly={readOnly} reload={load} onAddMedication={onAddMedication} />
         ) : layout ? (
@@ -173,7 +179,7 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
           <div className="mar-footer">
             {layout.instructionsLabel && <div><b>{layout.instructionsLabel}</b></div>}
             {/* the insulin log shows the prescription instructions inside its block instead */}
-            {sheet.instructions && !(layout.kind === "prn" && layout.blockStyle === "insulin") && (
+            {sheet.instructions && !(layout.kind === "prn" && layout.blockStyle === "insulin") && layout.kind !== "vitals" && (
               <div className="mar-instructions">{sheet.instructions}</div>
             )}
             {layout.footer.map((f) => (
