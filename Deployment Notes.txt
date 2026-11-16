@@ -114,6 +114,91 @@ solution. This also clears a MissingDependency: the Shelter Client form
 referenced cp_CpShelter.ServiceTransactions while the control itself sat in
 Active, which would have failed on import into another environment.
 
+9.
+Medication Administration Records (MAR), Detox solution. The paper MAR sheets
+move into Dataverse as five new tables, all user-owned and audited except the
+medication list:
+
+  cp_marsheet                  one paper sheet (or Home/Insulin medication
+                               block) per admission; cp_sheettype picks which
+                               of the 11 sheets it is (global choice
+                               cp_marsheettype)
+  cp_medicationadministration  one dose / grid entry on a sheet
+  cp_medicationreconciliation  the nightly count, refusals, two staff IDs
+  cp_marday                    a titration/taper day box: instruction and
+                               START / STOP
+  cp_detoxmedication           organization-owned list of medications for the
+                               PRN (OTC) sheet, seeded with Ibuprofen (Advil),
+                               Acetaminophen (Tylenol) and Ginger Gravol;
+                               nurses add others from the sheet
+
+Shared columns cover what the sheets have in common (dose, amount, count,
+2 mg / 8 mg counts, BP, HR, notes, staff); cp_ii_* and cp_po_* columns hold the
+insulin- and PRN-only fields. cp_marsheet.cp_frequency comes from the updated
+HOME MEDS template. Admission -> MAR Sheet -> dose / reconciliation / day are
+Restrict-delete; the shortcut lookups to Admission and cp_staff are
+RemoveLink. MAR Sheet's Sheet Type and Admission map onto new child records.
+cp_detoxmedication was added to the Detox app.
+
+cp_medicationadministration.cp_po_medication (a fixed choice) is superseded by
+the cp_detoxmedication lookup and holds no data; it is left in place pending a
+decision to delete it.
+
+Built by scripts/mar/build_mar_schema.py (tables, columns, relationships, app
+component, medication seed rows) and scripts/mar/build_mar_forms.py (views,
+mappings, main forms, the MAR Client Header admission quick view, and the
+Medications tab on the Detox Admission form). Both are re-runnable. The MAR
+Sheet main form is now arranged by hand in the maker portal (Sheet Type above
+the control), so the forms script only creates that form if it is missing.
+
+10.
+MAR Sheet control (PCF/MarSheet, cp_AlphaHouse.MarSheet, v0.1.15). Sits on the
+MAR Sheet form bound to cp_name and draws the sheet as its paper layout; every
+line a nurse fills in is saved as its own record:
+
+  12 date boxes + reconciliation    Methadone/Kadian Maintenance, High-Risk
+                                    Controlled, Benzodiazepine Maintenance,
+                                    Suboxone Maintenance (2 mg / 8 mg)
+  8 boxes with day instruction      Methadone/Kadian Titration, Suboxone
+                                    Titration
+  DAY ONE..EIGHT with START / STOP  Benzodiazepine Taper (8-Day), Benzodiazepine
+                                    Taper (Pre-filled 5-Day: QID QID TID BID OD,
+                                    stop on day 6, BP only)
+  medication rows                   PRN (OTC) from cp_detoxmedication with a
+                                    daily maximum per medication; General (Home)
+                                    MAR and Insulin Injection Log, one block per
+                                    sheet
+
+ID / initials default to the cp_staff record whose cp_email matches the
+signed-in user. Total daily dose, the 3-refusal banner and PRN daily totals are
+computed live; cp_refusalcount is kept in step from reconciliation refusals.
+A PRN dose over the daily maximum cannot be saved. Insulin entries need a B.G.
+level, a site when a dose is given, and a note when held; B.G. under 4.0 mmol/L
+shows red.
+
+Each layout was tested in the sandbox with Playwright against a synthetic
+client, admission and sheets that were deleted afterwards.
+
+11.
+Deploying the control. pac pcf push from a OneDrive-synced folder can fail with
+"Access to the path ...obj\PowerAppsToolsTemp_cp\bin\Debug is denied": delete
+obj\PowerAppsToolsTemp_cp and push again (see
+read-before-deploying-pcf-vscode-to-pp.txt). Bump the version in
+ControlManifest.Input.xml on every push.
+
+After a push the app can load the new bundle.js with the old MarSheet.css: web
+resources are cached under a {ticks}/webresources path held in the browser's
+Cache Storage and service worker, and neither the push's Publish All nor a
+further publish moves it for an open client. Staff may need a hard refresh
+after a release.
+
+12.
+Before go-live: 115 cp_staff rows have no cp_email and 23 use test domains, so
+those nurses will pick their name instead of being matched; some initials are
+duplicated (e.g. K.Al). The Medications tab sits in the overflow menu on iPad
+width. The PRN daily maximum is a hard stop with no override, and the low B.G.
+threshold is 4.0 mmol/L -- both to be confirmed by the nursing team.
+
 
 
 
