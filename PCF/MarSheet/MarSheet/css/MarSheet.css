@@ -67,7 +67,14 @@
 .mar-box .mar-table th:nth-child(2), .mar-box .mar-table td:nth-child(2) { width: 15%; }
 .mar-box .mar-table th:nth-child(3), .mar-box .mar-table td:nth-child(3) { width: 16%; }
 .mar-box .mar-table th:nth-child(4), .mar-box .mar-table td:nth-child(4) { width: 17%; }
-.mar-box .mar-table tbody td:nth-child(5) { white-space: normal; line-height: 1.15; font-size: 12px; }
+.mar-box .mar-table tbody td:last-child { white-space: normal; line-height: 1.15; font-size: 12px; }
+/* Suboxone: AMT/COUNT split into 2 mg and 8 mg columns */
+.mar-box .mar-table.mar-split th:nth-child(1), .mar-box .mar-table.mar-split td:nth-child(1) { width: 17%; }
+.mar-box .mar-table.mar-split th:nth-child(2), .mar-box .mar-table.mar-split td:nth-child(2) { width: 13%; }
+.mar-box .mar-table.mar-split th:nth-child(3), .mar-box .mar-table.mar-split td:nth-child(3),
+.mar-box .mar-table.mar-split th:nth-child(4), .mar-box .mar-table.mar-split td:nth-child(4) { width: 11%; }
+.mar-box .mar-table.mar-split th:nth-child(5), .mar-box .mar-table.mar-split td:nth-child(5) { width: 15%; }
+.mar-box .mar-table.mar-split tbody td:nth-child(5) { white-space: nowrap; font-size: inherit; }
 .mar-table tfoot td { font-weight: 700; border-top: 1px solid var(--rule); border-bottom: none; }
 
 .mar-row-click { cursor: pointer; }
@@ -109,6 +116,15 @@
 .mar-recon .mar-table th:nth-child(3), .mar-recon .mar-table td:nth-child(3) { width: 36px; }
 .mar-recon .mar-table th:nth-child(5), .mar-recon .mar-table td:nth-child(5),
 .mar-recon .mar-table th:nth-child(6), .mar-recon .mar-table td:nth-child(6) { width: 52px; }
+/* Suboxone reconciliation: DATE TIME 2 8 REASON ID ID - tighter columns so REASON keeps room */
+.mar-recon .mar-table.mar-split th:nth-child(1), .mar-recon .mar-table.mar-split td:nth-child(1) { width: 50px; }
+.mar-recon .mar-table.mar-split th:nth-child(2), .mar-recon .mar-table.mar-split td:nth-child(2) { width: 44px; }
+.mar-recon .mar-table.mar-split th:nth-child(3), .mar-recon .mar-table.mar-split td:nth-child(3),
+.mar-recon .mar-table.mar-split th:nth-child(4), .mar-recon .mar-table.mar-split td:nth-child(4) { width: 28px; }
+.mar-recon .mar-table.mar-split th:nth-child(5), .mar-recon .mar-table.mar-split td:nth-child(5) { width: auto; }
+.mar-recon .mar-table.mar-split th:nth-child(6), .mar-recon .mar-table.mar-split td:nth-child(6),
+.mar-recon .mar-table.mar-split th:nth-child(7), .mar-recon .mar-table.mar-split td:nth-child(7) { width: 44px; }
+.mar-recon .mar-table.mar-split tbody td { font-size: 12px; padding-left: 2px; padding-right: 2px; }
 
 .mar-footer { border-top: 2px solid var(--ink); padding: 6px 8px; }
 .mar-instructions { white-space: pre-wrap; margin: 4px 0; }

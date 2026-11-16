@@ -80,6 +80,8 @@ export interface DoseRow {
   at: Date;
   dose?: number;
   count?: number;
+  count2mg?: number;
+  count8mg?: number;
   bp?: string;
   hr?: number;
   staff?: Staff;
@@ -89,6 +91,8 @@ export interface ReconRow {
   id: string;
   at: Date;
   count?: number;
+  count2mg?: number;
+  count8mg?: number;
   isRefusal: boolean;
   reason?: string;
   staff1?: Staff;
@@ -102,6 +106,8 @@ export interface DailyBoxLayout {
   title: string;
   corner: string;
   countLabel: string;
+  /** Suboxone: the count column is split into 2 mg and 8 mg (cp_count2mg / cp_count8mg). */
+  splitCounts?: boolean;
   showHR: boolean;
   boxesPerPage: number;
   minRows: number;
@@ -147,5 +153,13 @@ export const LAYOUTS: Record<number, SheetLayout> = {
   [SHEET.BM]: {
     ...MAINTENANCE,
     title: "BENZODIAZEPINE MAINTENANCE MEDICATION",
+  },
+  [SHEET.SM]: {
+    ...MAINTENANCE,
+    title: "SUBOXONE MAINTENANCE MEDICATION",
+    countLabel: "AMT",
+    splitCounts: true,
+    instructionsLabel: "INSTRUCTIONS: Please include prescription start and end dates",
+    footer: ["TD = TOTAL DAILY DOSE   AMT = AMOUNT REMAINING", REFUSAL_RULE],
   },
 };

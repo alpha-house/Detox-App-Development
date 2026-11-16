@@ -2,6 +2,28 @@
 import { ClientInfo, DOSE_UNITS, DoseRow, MAR_STATUS, ReconRow, SheetInfo, Staff } from "./types";
 
 type Rec = Record<string, unknown>;
+
+/** What an editor row hands to saveDose / saveRecon. */
+export interface DoseInput {
+  at: Date;
+  dose?: number;
+  count?: number;
+  count2mg?: number;
+  count8mg?: number;
+  bp?: string;
+  hr?: number;
+  staff?: Staff;
+}
+export interface ReconInput {
+  at: Date;
+  count?: number;
+  count2mg?: number;
+  count8mg?: number;
+  isRefusal: boolean;
+  reason?: string;
+  staff1?: Staff;
+  staff2?: Staff;
+}
 type WebApi = ComponentFramework.WebApi;
 
 const str = (v: unknown): string | undefined =>
@@ -63,7 +85,7 @@ export class MarApi {
   async loadDoses(sheetId: string): Promise<DoseRow[]> {
     const res = await this.web.retrieveMultipleRecords(
       "cp_medicationadministration",
-      "?$select=cp_administeredon,cp_dose,cp_count,cp_bp,cp_hr" +
+      "?$select=cp_administeredon,cp_dose,cp_count,cp_count2mg,cp_count8mg,cp_bp,cp_hr" +
         `&$filter=_cp_marsheet_value eq ${sheetId} and statecode eq 0` +
         "&$orderby=cp_administeredon asc&$expand=cp_Staff($select=cp_staffid,cp_name,cp_initials)",
       5000
@@ -73,6 +95,8 @@ export class MarApi {
       at: new Date(String(e.cp_administeredon)),
       dose: num(e.cp_dose),
       count: num(e.cp_count),
+      count2mg: num(e.cp_count2mg),
+      count8mg: num(e.cp_count8mg),
       bp: str(e.cp_bp),
       hr: num(e.cp_hr),
       staff: toStaff(e.cp_Staff),
@@ -82,7 +106,7 @@ export class MarApi {
   async loadRecons(sheetId: string): Promise<ReconRow[]> {
     const res = await this.web.retrieveMultipleRecords(
       "cp_medicationreconciliation",
-      "?$select=cp_reconciledon,cp_count,cp_isrefusal,cp_reason" +
+      "?$select=cp_reconciledon,cp_count,cp_count2mg,cp_count8mg,cp_isrefusal,cp_reason" +
         `&$filter=_cp_marsheet_value eq ${sheetId} and statecode eq 0&$orderby=cp_reconciledon asc` +
         "&$expand=cp_Staff1($select=cp_staffid,cp_name,cp_initials),cp_Staff2($select=cp_staffid,cp_name,cp_initials)",
       5000
@@ -91,6 +115,8 @@ export class MarApi {
       id: String(e.cp_medicationreconciliationid),
       at: new Date(String(e.cp_reconciledon)),
       count: num(e.cp_count),
+      count2mg: num(e.cp_count2mg),
+      count8mg: num(e.cp_count8mg),
       isRefusal: e.cp_isrefusal === true,
       reason: str(e.cp_reason),
       staff1: toStaff(e.cp_Staff1),
@@ -123,12 +149,14 @@ export class MarApi {
 
   async saveDose(
     sheet: SheetInfo,
-    v: { id?: string; at: Date; dose?: number; count?: number; bp?: string; hr?: number; staff?: Staff }
+    v: DoseInput & { id?: string }
   ): Promise<void> {
     const body: Rec = {
       cp_administeredon: v.at.toISOString(),
       cp_dose: v.dose ?? null,
       cp_count: v.count ?? null,
+      cp_count2mg: v.count2mg ?? null,
+      cp_count8mg: v.count8mg ?? null,
       cp_bp: v.bp ?? null,
       cp_hr: v.hr ?? null,
     };
@@ -145,11 +173,13 @@ export class MarApi {
 
   async saveRecon(
     sheet: SheetInfo,
-    v: { id?: string; at: Date; count?: number; isRefusal: boolean; reason?: string; staff1?: Staff; staff2?: Staff }
+    v: ReconInput & { id?: string }
   ): Promise<void> {
     const body: Rec = {
       cp_reconciledon: v.at.toISOString(),
       cp_count: v.count ?? null,
+      cp_count2mg: v.count2mg ?? null,
+      cp_count8mg: v.count8mg ?? null,
       cp_isrefusal: v.isRefusal,
       cp_reason: v.reason ?? null,
     };

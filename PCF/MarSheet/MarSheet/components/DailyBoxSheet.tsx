@@ -1,5 +1,5 @@
 import * as React from "react";
-import { MarApi, errorText } from "./api";
+import { DoseInput, MarApi, ReconInput, errorText } from "./api";
 import {
   addDays,
   combine,
@@ -94,6 +94,8 @@ export const DailyBoxSheet: React.FC<Props> = (p) => {
 
   const unit = sheet.doseUnit ? ` ${sheet.doseUnit}` : "";
   const canAddDose = !p.readOnly && sheet.status === "Active";
+  const split = !!layout.splitCounts;
+  const cols = split ? 6 : 5;
 
   return (
     <div className={"mar-body" + (p.stacked ? " mar-stacked" : "")}>
@@ -126,12 +128,19 @@ export const DailyBoxSheet: React.FC<Props> = (p) => {
                   {k === dayKey(today) && <span className="mar-tag">Today</span>}
                   {afterEnd && <span className="mar-tag mar-tag-warn">After script end</span>}
                 </div>
-                <table className="mar-table">
+                <table className={"mar-table" + (split ? " mar-split" : "")}>
                   <thead>
                     <tr>
                       <th>TIME</th>
                       <th>DOSE</th>
-                      <th>{layout.countLabel}</th>
+                      {split ? (
+                        <>
+                          <th>{layout.countLabel} 2</th>
+                          <th>{layout.countLabel} 8</th>
+                        </>
+                      ) : (
+                        <th>{layout.countLabel}</th>
+                      )}
                       <th>ID</th>
                       <th>{layout.showHR ? "BP / HR" : "BP"}</th>
                     </tr>
@@ -145,7 +154,14 @@ export const DailyBoxSheet: React.FC<Props> = (p) => {
                         <tr key={r.id} className={p.readOnly ? "" : "mar-row-click"} onClick={() => !p.readOnly && !busy && setEditing({ kind: "dose", day: k, id: r.id })}>
                           <td>{fmtTime(r.at)}</td>
                           <td>{numStr(r.dose)}</td>
-                          <td>{numStr(r.count)}</td>
+                          {split ? (
+                            <>
+                              <td>{numStr(r.count2mg)}</td>
+                              <td>{numStr(r.count8mg)}</td>
+                            </>
+                          ) : (
+                            <td>{numStr(r.count)}</td>
+                          )}
                           <td title={r.staff?.name}>{r.staff?.initials ?? ""}</td>
                           <td>{[r.bp, layout.showHR && r.hr !== undefined ? r.hr : undefined].filter((x) => x !== undefined && x !== "").join(" / ")}</td>
                         </tr>
@@ -157,19 +173,20 @@ export const DailyBoxSheet: React.FC<Props> = (p) => {
                           onSave={(v) => void run(() => p.api.saveDose(sheet, v))} />
                       ) : (
                         <tr className="mar-row-add" onClick={() => !busy && setEditing({ kind: "dose", day: k })}>
-                          <td colSpan={5}>+ Record dose</td>
+                          <td colSpan={cols}>+ Record dose</td>
                         </tr>
                       ))}
                     {Array.from({ length: fillers }, (_, i) => (
                       <tr key={"f" + i} className="mar-row-blank">
-                        <td>&nbsp;</td><td /><td /><td /><td />
+                        <td>&nbsp;</td>
+                        {Array.from({ length: cols - 1 }, (_, j) => <td key={j} />)}
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr>
                       <td>TD</td>
-                      <td colSpan={4}>{rows.some((r) => r.dose !== undefined) ? `${td}${unit}` : ""}</td>
+                      <td colSpan={cols - 1}>{rows.some((r) => r.dose !== undefined) ? `${td}${unit}` : ""}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -190,14 +207,18 @@ interface DoseEditorProps extends Props {
   row?: DoseRow;
   busy: boolean;
   onCancel: () => void;
-  onSave: (v: { at: Date; dose?: number; count?: number; bp?: string; hr?: number; staff?: Staff }) => void;
+  onSave: (v: DoseInput) => void;
 }
 
 const DoseEditor: React.FC<DoseEditorProps> = ({ api, sheet, layout, me, day, row, busy, onCancel, onSave }) => {
   const isToday = dayKey(day) === dayKey(new Date());
+  const split = !!layout.splitCounts;
+  const cols = split ? 6 : 5;
   const [time, setTime] = React.useState(row ? timeInputValue(row.at) : isToday ? timeInputValue(new Date()) : "");
   const [dose, setDose] = React.useState(row ? numStr(row.dose) : numStr(toNum((sheet.dose ?? "").replace(/[^\d.]/g, ""))));
   const [count, setCount] = React.useState(numStr(row?.count));
+  const [c2, setC2] = React.useState(numStr(row?.count2mg));
+  const [c8, setC8] = React.useState(numStr(row?.count8mg));
   const [bp, setBp] = React.useState(row?.bp ?? "");
   const [hr, setHr] = React.useState(numStr(row?.hr));
   const [staff, setStaff] = React.useState<Staff | undefined>(row?.staff ?? me);
@@ -209,7 +230,11 @@ const DoseEditor: React.FC<DoseEditorProps> = ({ api, sheet, layout, me, day, ro
     if (at.getTime() > Date.now() + FUTURE_SLACK_MS) return setMsg("That time is in the future.");
     if (!staff) return setMsg("Pick your name for ID.");
     if (bp && !/^\d{2,3}\s*\/\s*\d{2,3}$/.test(bp.trim())) return setMsg("BP as 120/80.");
-    onSave({ at, dose: toNum(dose), count: toNum(count), bp: bp.trim() || undefined, hr: toNum(hr), staff });
+    onSave(
+      split
+        ? { at, dose: toNum(dose), count2mg: toNum(c2), count8mg: toNum(c8), bp: bp.trim() || undefined, hr: toNum(hr), staff }
+        : { at, dose: toNum(dose), count: toNum(count), bp: bp.trim() || undefined, hr: toNum(hr), staff }
+    );
   };
 
   return (
@@ -217,11 +242,18 @@ const DoseEditor: React.FC<DoseEditorProps> = ({ api, sheet, layout, me, day, ro
       {/* While editing, the row opens up into a labelled, wrapping form so the
           inputs are usable on an iPad; read-only rows keep the paper columns. */}
       <tr className="mar-row-edit">
-        <td colSpan={5}>
+        <td colSpan={cols}>
           <div className="mar-editor">
             <Field label="TIME"><input className="mar-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} /></Field>
             <Field label="DOSE"><input className="mar-input" inputMode="decimal" value={dose} onChange={(e) => setDose(e.target.value)} /></Field>
-            <Field label={layout.countLabel}><input className="mar-input" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} /></Field>
+            {split ? (
+              <>
+                <Field label={`${layout.countLabel} 2 mg`}><input className="mar-input" inputMode="numeric" value={c2} onChange={(e) => setC2(e.target.value)} /></Field>
+                <Field label={`${layout.countLabel} 8 mg`}><input className="mar-input" inputMode="numeric" value={c8} onChange={(e) => setC8(e.target.value)} /></Field>
+              </>
+            ) : (
+              <Field label={layout.countLabel}><input className="mar-input" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} /></Field>
+            )}
             <Field label="ID"><StaffPicker api={api} value={staff} onChange={setStaff} placeholder="ID" /></Field>
             <Field label="BP"><input className="mar-input" placeholder="BP" value={bp} onChange={(e) => setBp(e.target.value)} /></Field>
             {layout.showHR && (
@@ -231,7 +263,7 @@ const DoseEditor: React.FC<DoseEditorProps> = ({ api, sheet, layout, me, day, ro
         </td>
       </tr>
       <tr className="mar-row-actions">
-        <td colSpan={5}>
+        <td colSpan={cols}>
           {msg && <span className="mar-msg">{msg}</span>}
           <button type="button" className="mar-btn" disabled={busy} onClick={onCancel}>Cancel</button>
           <button type="button" className="mar-btn mar-btn-primary" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save"}</button>
@@ -264,17 +296,26 @@ const ReconPanel: React.FC<ReconPanelProps> = (p) => {
 
   const adding = editing?.kind === "recon" && !editing.id;
   const fillers = Math.max(0, RECON_MIN_ROWS - recons.length - 1);
+  const split = !!layout.splitCounts;
+  const cols = split ? 7 : 6;
   return (
     <div className="mar-recon">
       <div className="mar-recon-title">
         MEDICATION RECONCILIATION <span>– TO BE DONE ONCE DAILY ON EVENING/NIGHTS</span>
       </div>
-      <table className="mar-table">
+      <table className={"mar-table" + (split ? " mar-split" : "")}>
         <thead>
           <tr>
             <th>DATE</th>
             <th>TIME</th>
-            <th>{layout.reconCountLabel}</th>
+            {split ? (
+              <>
+                <th>2</th>
+                <th>8</th>
+              </>
+            ) : (
+              <th>{layout.reconCountLabel}</th>
+            )}
             <th>REASON / REFUSAL / WHY</th>
             <th>ID</th>
             <th>ID</th>
@@ -289,7 +330,14 @@ const ReconPanel: React.FC<ReconPanelProps> = (p) => {
                 onClick={() => !readOnly && !busy && setEditing({ kind: "recon", id: r.id })}>
                 <td>{fmtShortDate(r.at)}</td>
                 <td>{fmtTime(r.at)}</td>
-                <td>{numStr(r.count)}</td>
+                {split ? (
+                  <>
+                    <td>{numStr(r.count2mg)}</td>
+                    <td>{numStr(r.count8mg)}</td>
+                  </>
+                ) : (
+                  <td>{numStr(r.count)}</td>
+                )}
                 <td>{r.isRefusal && <b>REFUSED </b>}{r.reason ?? ""}</td>
                 <td title={r.staff1?.name}>{r.staff1?.initials ?? ""}</td>
                 <td title={r.staff2?.name}>{r.staff2?.initials ?? ""}</td>
@@ -301,12 +349,13 @@ const ReconPanel: React.FC<ReconPanelProps> = (p) => {
               <ReconEditor {...p} onCancel={() => setEditing(null)} onSave={(v) => void saveRecon(v)} />
             ) : (
               <tr className="mar-row-add" onClick={() => !busy && setEditing({ kind: "recon" })}>
-                <td colSpan={6}>+ Add reconciliation / refusal</td>
+                <td colSpan={cols}>+ Add reconciliation / refusal</td>
               </tr>
             ))}
           {Array.from({ length: fillers }, (_, i) => (
             <tr key={"f" + i} className="mar-row-blank">
-              <td>&nbsp;</td><td /><td /><td /><td /><td />
+              <td>&nbsp;</td>
+              {Array.from({ length: cols - 1 }, (_, j) => <td key={j} />)}
             </tr>
           ))}
         </tbody>
@@ -318,14 +367,18 @@ const ReconPanel: React.FC<ReconPanelProps> = (p) => {
 interface ReconEditorProps extends ReconPanelProps {
   row?: ReconRow;
   onCancel: () => void;
-  onSave: (v: { at: Date; count?: number; isRefusal: boolean; reason?: string; staff1?: Staff; staff2?: Staff }) => void;
+  onSave: (v: ReconInput) => void;
 }
 
-const ReconEditor: React.FC<ReconEditorProps> = ({ api, me, row, busy, onCancel, onSave }) => {
+const ReconEditor: React.FC<ReconEditorProps> = ({ api, layout, me, row, busy, onCancel, onSave }) => {
   const now = new Date();
+  const split = !!layout.splitCounts;
+  const cols = split ? 7 : 6;
   const [date, setDate] = React.useState(dateInputValue(row?.at ?? now));
   const [time, setTime] = React.useState(timeInputValue(row?.at ?? now));
   const [count, setCount] = React.useState(numStr(row?.count));
+  const [c2, setC2] = React.useState(numStr(row?.count2mg));
+  const [c8, setC8] = React.useState(numStr(row?.count8mg));
   const [refused, setRefused] = React.useState(row?.isRefusal ?? false);
   const [reason, setReason] = React.useState(row?.reason ?? "");
   const [staff1, setStaff1] = React.useState<Staff | undefined>(row?.staff1 ?? me);
@@ -339,17 +392,25 @@ const ReconEditor: React.FC<ReconEditorProps> = ({ api, me, row, busy, onCancel,
     if (at.getTime() > Date.now() + FUTURE_SLACK_MS) return setMsg("That time is in the future.");
     if (refused && !reason.trim()) return setMsg("Chart why the medication was refused.");
     if (!staff1) return setMsg("Pick your name for the first ID.");
-    onSave({ at, count: toNum(count), isRefusal: refused, reason: reason.trim() || undefined, staff1, staff2 });
+    const counts = split ? { count2mg: toNum(c2), count8mg: toNum(c8) } : { count: toNum(count) };
+    onSave({ at, ...counts, isRefusal: refused, reason: reason.trim() || undefined, staff1, staff2 });
   };
 
   return (
     <>
       <tr className="mar-row-edit">
-        <td colSpan={6}>
+        <td colSpan={cols}>
           <div className="mar-editor">
             <Field label="DATE"><input className="mar-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
             <Field label="TIME"><input className="mar-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} /></Field>
-            <Field label="#"><input className="mar-input" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} /></Field>
+            {split ? (
+              <>
+                <Field label="2 mg #"><input className="mar-input" inputMode="numeric" value={c2} onChange={(e) => setC2(e.target.value)} /></Field>
+                <Field label="8 mg #"><input className="mar-input" inputMode="numeric" value={c8} onChange={(e) => setC8(e.target.value)} /></Field>
+              </>
+            ) : (
+              <Field label="#"><input className="mar-input" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} /></Field>
+            )}
             <Field label="REFUSED">
               <label className="mar-check">
                 <input type="checkbox" checked={refused} onChange={(e) => setRefused(e.target.checked)} /> Refused
@@ -364,7 +425,7 @@ const ReconEditor: React.FC<ReconEditorProps> = ({ api, me, row, busy, onCancel,
         </td>
       </tr>
       <tr className="mar-row-actions">
-        <td colSpan={6}>
+        <td colSpan={cols}>
           {msg && <span className="mar-msg">{msg}</span>}
           <button type="button" className="mar-btn" disabled={busy} onClick={onCancel}>Cancel</button>
           <button type="button" className="mar-btn mar-btn-primary" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save"}</button>
