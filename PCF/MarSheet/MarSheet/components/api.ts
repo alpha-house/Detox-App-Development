@@ -26,7 +26,7 @@ export class MarApi {
     const r = (await this.web.retrieveRecord(
       "cp_marsheet",
       id,
-      "?$select=cp_sheettype,cp_medication,cp_dose,cp_doseunit,cp_startdate,cp_enddate,cp_substancehistory," +
+      "?$select=cp_sheettype,cp_medication,cp_dose,cp_doseunit,cp_frequency,cp_startdate,cp_enddate,cp_substancehistory," +
         "cp_instructions,cp_marstatus,cp_refusalcount,_cp_admission_value" +
         "&$expand=cp_Admission($select=cp_detoxfile,cp_allergies,cr6ca_ahcnumber;" +
         "$expand=cp_Client($select=fullname,cp_dateofbirth,birthdate),cp_Bed($select=cp_name))"
@@ -48,6 +48,7 @@ export class MarApi {
       medication: str(r.cp_medication),
       dose: str(r.cp_dose),
       doseUnit: DOSE_UNITS[Number(r.cp_doseunit)],
+      frequency: str(r.cp_frequency),
       startDate: str(r.cp_startdate)?.substring(0, 10),
       endDate: str(r.cp_enddate)?.substring(0, 10),
       substanceHistory: str(r.cp_substancehistory),

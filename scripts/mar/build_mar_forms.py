@@ -103,7 +103,8 @@ def section(key, title, rows, table, two_col=True, showlabel=True):
 
 
 def subgrid_section(key, title, relationship, target, view_id, per_page=10, height=8):
-    rows = (f'<row><cell id="{g(key + "cell")}" showlabel="true" rowspan="{height}" colspan="1" auto="false">'
+    # the section already shows the title, so the grid cell's own label is hidden
+    rows = (f'<row><cell id="{g(key + "cell")}" showlabel="false" rowspan="{height}" colspan="1" auto="false">'
             f'{lbl(title)}<control indicationOfSubgrid="true" id="{key}" classid="{SUBGRID}"><parameters>'
             f'<RecordsPerPage>{per_page}</RecordsPerPage><AutoExpand>Fixed</AutoExpand>'
             f'<EnableQuickFind>false</EnableQuickFind><EnableViewPicker>false</EnableViewPicker>'
@@ -258,7 +259,7 @@ def step_forms(assoc):
     qv_xml = form([tab("marqv_tab", "MAR Client Header", [section(
         "marqv_sec", "Client", [("cp_client",), ("cp_detoxfile",), ("cp_bed",), ("cr6ca_ahcnumber",),
                                 ("cp_allergies",), ("cp_diabetes",), ("cp_typeofdiabetes",)], A,
-        two_col=False)])])  # quick view forms only allow single-column sections
+        two_col=False, showlabel=False)])])  # single-column only; the host section shows "Client"
     qv_id = upsert_form(A, 6, "MAR Client Header", qv_xml,
                         description="Client details shown at the top of MAR sheets.")
 
@@ -272,7 +273,7 @@ def step_forms(assoc):
             quickview_section("ms_client", "Client", "cp_admission", qv_id),
             section("ms_presc", "Prescription", [
                 ("cp_sheettype", "cp_admission"), ("cp_medication", "cp_marstatus"),
-                ("cp_dose", "cp_doseunit"), ("cp_startdate", "cp_enddate"),
+                ("cp_dose", "cp_doseunit"), ("cp_frequency", None), ("cp_startdate", "cp_enddate"),
                 ("cp_substancehistory", "cp_refusalcount"), ("cp_instructions",),
                 ("cp_po_contraindications",), ("cp_name", "ownerid")], t)]),
         tab("ms_tab_entries", "Doses & Reconciliation", [
@@ -314,8 +315,20 @@ def step_admission_tab(assoc):
     print("== Admission form: Medications tab")
     xml = call("GET", f"systemforms({ADMISSION_FORM_ID})/Microsoft.Dynamics.CRM.RetrieveUnpublished()"
                       "?$select=formxml")["formxml"]
+    new_tab = tab(MARK, "Medications", [
+        subgrid_section("sg_adm_marsheets", "MAR Sheets", "cp_cp_admission_cp_marsheet",
+                        "cp_marsheet", assoc["cp_marsheet"], 10, 8),
+        subgrid_section("sg_adm_doses", "All Doses (every sheet)", "cp_cp_admission_cp_medicationadministration",
+                        "cp_medicationadministration", assoc["cp_medicationadministration"], 10, 8)])
     if MARK in xml:
-        print("   already present")
+        # regenerate the existing tab in place so layout fixes reach the live form
+        s = xml.find(f'<tab name="{MARK}"')
+        e = xml.find("</tab>", s) + len("</tab>")
+        if xml[s:e] == new_tab:
+            print("   already up to date")
+            return
+        call("PATCH", f"systemforms({ADMISSION_FORM_ID})", {"formxml": xml[:s] + new_tab + xml[e:]})
+        print("   regenerated")
         return
     i = xml.find('<label description="Withdrawal" languagecode="1033"')
     if i < 0:
@@ -324,11 +337,6 @@ def step_admission_tab(assoc):
     end = xml.find("</tab>", i) + len("</tab>")
     if "<tab " in xml[start + 5:i]:
         raise RuntimeError("Withdrawal label is not a tab label")
-    new_tab = tab(MARK, "Medications", [
-        subgrid_section("sg_adm_marsheets", "MAR Sheets", "cp_cp_admission_cp_marsheet",
-                        "cp_marsheet", assoc["cp_marsheet"], 10, 8),
-        subgrid_section("sg_adm_doses", "All Doses (every sheet)", "cp_cp_admission_cp_medicationadministration",
-                        "cp_medicationadministration", assoc["cp_medicationadministration"], 10, 8)])
     call("PATCH", f"systemforms({ADMISSION_FORM_ID})", {"formxml": xml[:end] + new_tab + xml[end:]})
     print("   inserted after Withdrawal")
 

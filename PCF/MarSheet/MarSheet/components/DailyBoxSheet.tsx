@@ -37,6 +37,14 @@ const toNum = (s: string): number | undefined => {
   return Number.isFinite(n) ? n : undefined;
 };
 const numStr = (n?: number) => (n === undefined ? "" : String(n));
+
+/** A labelled input inside an open editor row. */
+const Field: React.FC<{ label: string; wide?: boolean }> = ({ label, wide, children }) => (
+  <div className={"mar-field" + (wide ? " mar-field-wide" : "")}>
+    <span className="mar-field-label">{label}</span>
+    {children}
+  </div>
+);
 const FUTURE_SLACK_MS = 5 * 60 * 1000;
 
 export const DailyBoxSheet: React.FC<Props> = (p) => {
@@ -206,14 +214,20 @@ const DoseEditor: React.FC<DoseEditorProps> = ({ api, sheet, layout, me, day, ro
 
   return (
     <>
+      {/* While editing, the row opens up into a labelled, wrapping form so the
+          inputs are usable on an iPad; read-only rows keep the paper columns. */}
       <tr className="mar-row-edit">
-        <td><input className="mar-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} /></td>
-        <td><input className="mar-input" inputMode="decimal" value={dose} onChange={(e) => setDose(e.target.value)} /></td>
-        <td><input className="mar-input" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} /></td>
-        <td><StaffPicker api={api} value={staff} onChange={setStaff} placeholder="ID" /></td>
-        <td className="mar-bphr">
-          <input className="mar-input" placeholder="BP" value={bp} onChange={(e) => setBp(e.target.value)} />
-          {layout.showHR && <input className="mar-input" inputMode="numeric" placeholder="HR" value={hr} onChange={(e) => setHr(e.target.value)} />}
+        <td colSpan={5}>
+          <div className="mar-editor">
+            <Field label="TIME"><input className="mar-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} /></Field>
+            <Field label="DOSE"><input className="mar-input" inputMode="decimal" value={dose} onChange={(e) => setDose(e.target.value)} /></Field>
+            <Field label={layout.countLabel}><input className="mar-input" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} /></Field>
+            <Field label="ID"><StaffPicker api={api} value={staff} onChange={setStaff} placeholder="ID" /></Field>
+            <Field label="BP"><input className="mar-input" placeholder="BP" value={bp} onChange={(e) => setBp(e.target.value)} /></Field>
+            {layout.showHR && (
+              <Field label="HR"><input className="mar-input" inputMode="numeric" placeholder="HR" value={hr} onChange={(e) => setHr(e.target.value)} /></Field>
+            )}
+          </div>
         </td>
       </tr>
       <tr className="mar-row-actions">
@@ -331,17 +345,23 @@ const ReconEditor: React.FC<ReconEditorProps> = ({ api, me, row, busy, onCancel,
   return (
     <>
       <tr className="mar-row-edit">
-        <td><input className="mar-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></td>
-        <td><input className="mar-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} /></td>
-        <td><input className="mar-input" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} /></td>
-        <td>
-          <label className="mar-check">
-            <input type="checkbox" checked={refused} onChange={(e) => setRefused(e.target.checked)} /> Refused
-          </label>
-          <input className="mar-input mar-input-wide" placeholder={refused ? "Why refused (required)" : "Reason / notes"} value={reason} onChange={(e) => setReason(e.target.value)} />
+        <td colSpan={6}>
+          <div className="mar-editor">
+            <Field label="DATE"><input className="mar-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+            <Field label="TIME"><input className="mar-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} /></Field>
+            <Field label="#"><input className="mar-input" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} /></Field>
+            <Field label="REFUSED">
+              <label className="mar-check">
+                <input type="checkbox" checked={refused} onChange={(e) => setRefused(e.target.checked)} /> Refused
+              </label>
+            </Field>
+            <Field label="REASON / REFUSAL / WHY" wide>
+              <input className="mar-input mar-input-wide" placeholder={refused ? "Why refused (required)" : "Reason / notes"} value={reason} onChange={(e) => setReason(e.target.value)} />
+            </Field>
+            <Field label="ID"><StaffPicker api={api} value={staff1} onChange={setStaff1} placeholder="ID" /></Field>
+            <Field label="2ND ID"><StaffPicker api={api} value={staff2} onChange={setStaff2} placeholder="2nd ID" /></Field>
+          </div>
         </td>
-        <td><StaffPicker api={api} value={staff1} onChange={setStaff1} placeholder="ID" /></td>
-        <td><StaffPicker api={api} value={staff2} onChange={setStaff2} placeholder="2nd ID" /></td>
       </tr>
       <tr className="mar-row-actions">
         <td colSpan={6}>

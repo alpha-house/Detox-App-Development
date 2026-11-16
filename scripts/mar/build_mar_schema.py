@@ -199,6 +199,7 @@ COLUMNS = {
         s("cp_Medication", "Medication", 200),
         s("cp_Dose", "Prescribed Dose", 100, "Prescribed dose as written on the sheet."),
         choice("cp_DoseUnit", "Dose Unit", ["mg", "units", "tabs", "mL"]),
+        s("cp_Frequency", "Frequency", 100, "How often the medication is given, e.g. BID, QID, q4h PRN (HOME MAR)."),
         date_only("cp_StartDate", "Start Date", "Script / prescription start date."),
         date_only("cp_EndDate", "End Date", "Script / prescription end date."),
         s("cp_SubstanceHistory", "Substance History", 500, "Type of opiate / last use"),

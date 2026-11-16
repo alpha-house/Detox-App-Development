@@ -117,6 +117,7 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
           <div className="mar-presc">
             <div>Medication <b>{sheet.medication ?? ""}</b></div>
             <div>Dose: <b>{sheet.dose ?? ""}{sheet.doseUnit && sheet.dose && !/[a-z]/i.test(sheet.dose) ? ` ${sheet.doseUnit}` : ""}</b></div>
+            {sheet.frequency && <div>Frequency: <b>{sheet.frequency}</b></div>}
             <div>DATE: <b>{fmtDateOnly(sheet.startDate)}{sheet.endDate ? ` – ${fmtDateOnly(sheet.endDate)}` : ""}</b></div>
             <div>Allergies: <b className={c.allergies ? "mar-allergy" : ""}>{c.allergies ?? ""}</b></div>
           </div>

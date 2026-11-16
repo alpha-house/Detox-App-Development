@@ -64,6 +64,7 @@ export interface SheetInfo {
   medication?: string;
   dose?: string;
   doseUnit?: string;
+  frequency?: string;
   startDate?: string; // yyyy-mm-dd
   endDate?: string; // yyyy-mm-dd
   substanceHistory?: string;

@@ -62,6 +62,12 @@
 .mar-table th { font-size: 10px; font-weight: 600; text-align: left; padding: 2px 3px; border-bottom: 1px solid var(--rule); border-right: 1px solid var(--rule); }
 .mar-table td { padding: 2px 3px; height: 26px; border-bottom: 1px solid #c8c8c8; border-right: 1px solid #c8c8c8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mar-table th:last-child, .mar-table td:last-child { border-right: none; }
+/* day boxes: give BP / HR the room it needs and let it wrap rather than truncate */
+.mar-box .mar-table th:nth-child(1), .mar-box .mar-table td:nth-child(1) { width: 19%; }
+.mar-box .mar-table th:nth-child(2), .mar-box .mar-table td:nth-child(2) { width: 15%; }
+.mar-box .mar-table th:nth-child(3), .mar-box .mar-table td:nth-child(3) { width: 16%; }
+.mar-box .mar-table th:nth-child(4), .mar-box .mar-table td:nth-child(4) { width: 17%; }
+.mar-box .mar-table tbody td:nth-child(5) { white-space: normal; line-height: 1.15; font-size: 12px; }
 .mar-table tfoot td { font-weight: 700; border-top: 1px solid var(--rule); border-bottom: none; }
 
 .mar-row-click { cursor: pointer; }
@@ -73,6 +79,11 @@
 .mar-row-actions td { background: #eef5fc; text-align: right; height: auto; white-space: normal; }
 .mar-refusal td { color: var(--err-ink); }
 
+/* open editor row: labelled fields that wrap, so inputs stay usable in narrow boxes */
+.mar-editor { display: flex; flex-wrap: wrap; gap: 6px 8px; padding: 4px 2px; }
+.mar-field { display: flex; flex-direction: column; gap: 2px; flex: 1 1 96px; min-width: 96px; }
+.mar-field-wide { flex: 3 1 220px; }
+.mar-field-label { font-size: 10px; font-weight: 600; color: #444; }
 .mar-input { width: 100%; min-height: 30px; font: inherit; font-size: 13px; padding: 2px 4px; border: 1px solid #8a8a8a; border-radius: 2px; background: #fff; }
 .mar-input-wide { margin-top: 3px; }
 .mar-bphr { display: flex; gap: 2px; }
@@ -86,7 +97,7 @@
 .mar-staff-chip { display: inline-flex; align-items: center; gap: 2px; font-weight: 700; }
 .mar-chip-x { border: none; background: none; cursor: pointer; font-size: 14px; color: #666; padding: 0 2px; }
 .mar-picker { position: relative; display: block; }
-.mar-picker-list { position: absolute; z-index: 20; left: 0; top: 100%; min-width: 220px; margin: 0; padding: 0; list-style: none; background: #fff; border: 1px solid #8a8a8a; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); }
+.mar-picker-list { position: absolute; z-index: 20; left: 0; top: 100%; min-width: 220px; max-width: 320px; max-height: 260px; overflow-y: auto; margin: 0; padding: 0; list-style: none; background: #fff; border: 1px solid #8a8a8a; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); }
 .mar-picker-list button { display: block; width: 100%; text-align: left; padding: 6px 8px; border: none; background: none; font: inherit; cursor: pointer; }
 .mar-picker-list button:hover { background: #eef5fc; }
 
