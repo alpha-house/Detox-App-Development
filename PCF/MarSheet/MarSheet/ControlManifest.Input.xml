@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <manifest>
-  <control namespace="AlphaHouse" constructor="MarSheet" version="0.1.12"
+  <control namespace="AlphaHouse" constructor="MarSheet" version="0.1.14"
            display-name-key="MAR Sheet"
            description-key="Paper-style Medication Administration Record. Each dose and reconciliation line is saved as its own record against the MAR Sheet."
            control-type="virtual">

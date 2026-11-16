@@ -154,6 +154,15 @@ export interface PrnLayout {
   footer: string[];
   /** TIME/AMT/INITIAL slots per date row on paper (more wrap onto the same row). */
   slotsPerRow: number;
+  /** "medicationList": a block per cp_detoxmedication on the PRN list (PRN OTC).
+   *  "sheet": one block for the sheet's own medication / dose / frequency / start-end (Home MAR). */
+  source: "medicationList" | "sheet";
+  /** NOTES / WHY NEEDED must be filled in (PRN). */
+  requireWhy: boolean;
+  /** Show the DOSE (mg) field in the editor (PRN); Home MAR charts AMT only. */
+  showDoseField: boolean;
+  /** Header shows the "contraindicated with PRN (OTC) medications" line. */
+  contraLine: boolean;
 }
 
 export type SheetLayout = DailyBoxLayout | PrnLayout;
@@ -199,6 +208,23 @@ export const LAYOUTS: Record<number, SheetLayout> = {
     instructionsLabel: "INSTRUCTIONS:",
     footer: ["Chart each dose given: TIME / AMOUNT / INITIAL, and why it was needed."],
     slotsPerRow: 5,
+    source: "medicationList",
+    requireWhy: true,
+    showDoseField: true,
+    contraLine: true,
+  },
+  [SHEET.HM]: {
+    kind: "prn",
+    title: "HOME MEDICATION ADMINISTRATION RECORD (MAR)",
+    corner: "Alpha House Detox",
+    substanceHint: "",
+    instructionsLabel: "INSTRUCTIONS:",
+    footer: ["Chart each dose given: TIME / AMOUNT / INITIAL. Use NOTES / WHY NEEDED for anything not given as prescribed."],
+    slotsPerRow: 4,
+    source: "sheet",
+    requireWhy: false,
+    showDoseField: false,
+    contraLine: false,
   },
   [SHEET.MK]: {
     ...MAINTENANCE,

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { MarApi, errorText } from "./api";
-import { combine, dayKey, fmtBoxDate, fmtTime, startOfDay, timeInputValue } from "./dates";
+import { combine, dayKey, fmtBoxDate, fmtDateOnly, fmtTime, startOfDay, timeInputValue } from "./dates";
 import { StaffPicker } from "./StaffPicker";
 import { DoseRow, Medication, PrnLayout, SheetInfo, Staff } from "./types";
 
@@ -37,10 +37,17 @@ const OTHER = "__other__";
 const usedBy = (m: Medication | undefined, d: { dose?: number; amount?: number }) =>
   m?.maxUnit === "mg" ? d.dose ?? 0 : m?.maxUnit === "tabs" ? d.amount ?? 0 : 0;
 
-const entryText = (d: DoseRow) =>
-  [fmtTime(d.at), d.dose !== undefined ? `${d.dose} mg` : undefined, d.amount !== undefined ? `${d.amount} tab${d.amount === 1 ? "" : "s"}` : undefined, d.staff?.initials]
+/** "10:55 · 400 mg · 2 tabs · D.Se" (PRN) or "08:00 · 1 tab · D.Se" (Home, unit from the sheet). */
+const entryText = (d: DoseRow, amountUnit: string) =>
+  [
+    fmtTime(d.at),
+    d.dose !== undefined ? `${d.dose} mg` : undefined,
+    d.amount !== undefined ? `${d.amount}${amountUnit ? " " + (d.amount === 1 ? amountUnit.replace(/s$/, "") : amountUnit) : ""}` : undefined,
+    d.staff?.initials,
+  ]
     .filter(Boolean)
     .join(" · ");
+const SHEET_BLOCK = "__sheet__";
 
 export const PrnSheet: React.FC<Props> = (p) => {
   const { sheet, meds, doses } = p;
@@ -50,14 +57,24 @@ export const PrnSheet: React.FC<Props> = (p) => {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string>();
   const canAdd = !p.readOnly && sheet.status === "Active";
+  const sheetMode = p.layout.source === "sheet";
+  // Home MAR: AMT is in the sheet's own unit (tabs, mL…); PRN: always tabs.
+  const amountUnit = sheetMode ? (sheet.doseUnit && sheet.doseUnit !== "mg" ? sheet.doseUnit : "") : "tabs";
+  const endKey = sheet.endDate;
 
-  // Blocks: every medication on the PRN list, plus any other medication already charted here.
+  // Blocks. PRN: every medication on the PRN list, plus any other medication already charted here.
+  // Home MAR: a single block for the sheet's own medication.
   const medById = new Map(meds.map((m) => [m.id, m]));
-  const blocks: { id: string; med?: Medication; name: string }[] = meds.filter((m) => m.prn).map((m) => ({ id: m.id, med: m, name: m.name }));
-  for (const d of doses) {
-    const id = d.medicationId ?? OTHER;
-    if (!blocks.some((b) => b.id === id)) blocks.push({ id, med: medById.get(id), name: d.medicationName ?? "Medication not recorded" });
+  const blocks: { id: string; med?: Medication; name: string }[] = sheetMode
+    ? [{ id: SHEET_BLOCK, name: sheet.medication ?? "Medication" }]
+    : meds.filter((m) => m.prn).map((m) => ({ id: m.id, med: m, name: m.name }));
+  if (!sheetMode) {
+    for (const d of doses) {
+      const id = d.medicationId ?? OTHER;
+      if (!blocks.some((b) => b.id === id)) blocks.push({ id, med: medById.get(id), name: d.medicationName ?? "Medication not recorded" });
+    }
   }
+  const blockOf = (d: DoseRow) => (sheetMode ? SHEET_BLOCK : d.medicationId ?? OTHER);
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -77,7 +94,7 @@ export const PrnSheet: React.FC<Props> = (p) => {
     <div className="mar-prn">
       <div className="mar-prn-bar">
         <span className="mar-small">Tap + on a row to chart a dose, or tap an entry to correct it.</span>
-        {p.onAddMedication && !p.readOnly && (
+        {!sheetMode && p.onAddMedication && !p.readOnly && (
           <button type="button" className="mar-btn" onClick={p.onAddMedication}>
             + Add a medication to the list
           </button>
@@ -94,13 +111,14 @@ export const PrnSheet: React.FC<Props> = (p) => {
           </tr>
         </thead>
         {blocks.map((b) => {
-          const mine = doses.filter((d) => (d.medicationId ?? OTHER) === b.id);
+          const mine = doses.filter((d) => blockOf(d) === b.id);
+          const chartable = canAdd && (sheetMode || !!b.med);
           const byDate = new Map<string, DoseRow[]>();
           for (const d of mine) {
             const k = dayKey(d.at);
             byDate.set(k, [...(byDate.get(k) ?? []), d]);
           }
-          if (canAdd && b.med) byDate.set(todayKey, byDate.get(todayKey) ?? []);
+          if (chartable) byDate.set(todayKey, byDate.get(todayKey) ?? []);
           const dates = [...byDate.keys()].sort();
           const usedToday = (byDate.get(todayKey) ?? []).reduce((s, d) => s + usedBy(b.med, d), 0);
           const over = !!b.med?.maxDaily && usedToday > b.med.maxDaily;
@@ -110,7 +128,7 @@ export const PrnSheet: React.FC<Props> = (p) => {
             <tbody key={b.id} className="mar-prn-block">
               {dates.length === 0 && (
                 <tr>
-                  <td rowSpan={rowSpan} className="mar-prn-med"><MedCell b={b} usedToday={0} over={false} /></td>
+                  <td rowSpan={rowSpan} className="mar-prn-med"><MedCell b={b} usedToday={0} over={false} sheet={sheetMode ? sheet : undefined} /></td>
                   <td colSpan={3} className="mar-small">No doses charted.</td>
                 </tr>
               )}
@@ -123,18 +141,22 @@ export const PrnSheet: React.FC<Props> = (p) => {
                     <tr>
                       {i === 0 && (
                         <td rowSpan={rowSpan} className="mar-prn-med">
-                          <MedCell b={b} usedToday={usedToday} over={over} />
+                          <MedCell b={b} usedToday={usedToday} over={over} sheet={sheetMode ? sheet : undefined} />
                         </td>
                       )}
-                      <td className="mar-prn-date">{fmtBoxDate(new Date(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1, Number(k.slice(8, 10))))}{k === todayKey && <span className="mar-tag">Today</span>}</td>
+                      <td className="mar-prn-date">
+                        {fmtBoxDate(new Date(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1, Number(k.slice(8, 10))))}
+                        {k === todayKey && <span className="mar-tag">Today</span>}
+                        {sheetMode && endKey && k > endKey && <span className="mar-tag mar-tag-warn">After end date</span>}
+                      </td>
                       <td className="mar-prn-entries">
                         {rows.map((r) => (
                           <button key={r.id} type="button" className="mar-prn-entry" title={r.staff?.name}
                             disabled={p.readOnly || busy} onClick={() => setEditing({ medId: b.id, date: k, id: r.id })}>
-                            {entryText(r)}
+                            {entryText(r, amountUnit)}
                           </button>
                         ))}
-                        {canAdd && b.med && !isFuture && (
+                        {chartable && !isFuture && (
                           <button type="button" className="mar-prn-add" disabled={busy} onClick={() => setEditing({ medId: b.id, date: k })}>
                             +
                           </button>
@@ -143,7 +165,7 @@ export const PrnSheet: React.FC<Props> = (p) => {
                       <td className="mar-prn-notes">{notes}</td>
                     </tr>
                     {editorHere && editing?.date === k && (
-                      <PrnEditor key={editing.id ?? "new"} {...p} busy={busy} blockMed={b.med} date={k}
+                      <PrnEditor key={editing.id ?? "new"} {...p} busy={busy} blockMed={b.med} date={k} amountUnit={amountUnit}
                         row={editing.id ? rows.find((r) => r.id === editing.id) : undefined}
                         dosesForCheck={doses}
                         onCancel={() => setEditing(null)}
@@ -160,9 +182,18 @@ export const PrnSheet: React.FC<Props> = (p) => {
   );
 };
 
-const MedCell: React.FC<{ b: { med?: Medication; name: string }; usedToday: number; over: boolean }> = ({ b, usedToday, over }) => (
+const MedCell: React.FC<{ b: { med?: Medication; name: string }; usedToday: number; over: boolean; sheet?: SheetInfo }> = ({ b, usedToday, over, sheet }) => (
   <>
     <div className="mar-prn-name">{b.name}</div>
+    {sheet && (
+      // Home MAR block header, as on paper: DOSE / FREQUENCY / START DATE / END DATE
+      <div className="mar-prn-sheetmed">
+        <div>DOSE: <b>{sheet.dose ?? ""}{sheet.doseUnit && sheet.dose && !/[a-z]/i.test(sheet.dose) ? ` ${sheet.doseUnit}` : ""}</b></div>
+        <div>FREQUENCY: <b>{sheet.frequency ?? ""}</b></div>
+        <div>START DATE: <b>{fmtDateOnly(sheet.startDate)}</b></div>
+        <div>END DATE: <b>{fmtDateOnly(sheet.endDate)}</b></div>
+      </div>
+    )}
     {b.med?.strength && <div>{b.med.strength}</div>}
     {b.med?.directions && <div className="mar-small">{b.med.directions}</div>}
     {b.med?.maxDaily !== undefined && b.med.maxUnit && (
@@ -178,13 +209,16 @@ interface EditorProps extends Props {
   busy: boolean;
   blockMed?: Medication;
   date: string;
+  amountUnit: string;
   row?: DoseRow;
   dosesForCheck: DoseRow[];
   onCancel: () => void;
   onSave: (v: Parameters<MarApi["saveDose"]>[1]) => void;
 }
 
-const PrnEditor: React.FC<EditorProps> = ({ api, meds, me, busy, blockMed, date, row, dosesForCheck, onCancel, onSave }) => {
+const PrnEditor: React.FC<EditorProps> = ({ api, layout, meds, me, busy, blockMed, date, amountUnit, row, dosesForCheck, onCancel, onSave }) => {
+  const sheetMode = layout.source === "sheet";
+  const amtLabel = amountUnit ? `AMT (${amountUnit})` : "AMT";
   const isToday = date === dayKey(new Date());
   const [medId, setMedId] = React.useState(row?.medicationId ?? blockMed?.id ?? "");
   const [day, setDay] = React.useState(date);
@@ -199,11 +233,19 @@ const PrnEditor: React.FC<EditorProps> = ({ api, meds, me, busy, blockMed, date,
   const save = () => {
     const d = /^\d{4}-\d{2}-\d{2}$/.test(day) ? new Date(Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10))) : undefined;
     const at = d && combine(d, time);
-    if (!med) return setMsg("Choose the medication.");
     if (!at) return setMsg("Enter the date and time.");
     if (at.getTime() > Date.now() + FUTURE_SLACK_MS) return setMsg("That time is in the future.");
     const doseN = toNum(dose);
     const amountN = toNum(amount);
+    if (sheetMode) {
+      // Home MAR: the medication is the sheet's own; chart TIME / AMT / INITIAL (+ optional notes)
+      if (amount.trim() && amountN === undefined) return setMsg("Amount must be a number.");
+      if (amountN === undefined) return setMsg("Enter the amount given.");
+      if (layout.requireWhy && !notes.trim()) return setMsg("Chart why it was needed.");
+      if (!staff) return setMsg("Pick your name for INITIAL.");
+      return onSave({ id: row?.id, at, amount: amountN, notes: notes.trim() || undefined, staff });
+    }
+    if (!med) return setMsg("Choose the medication.");
     if (dose.trim() && doseN === undefined) return setMsg("Dose must be a number (mg).");
     if (amount.trim() && amountN === undefined) return setMsg("Amount must be a number (tabs).");
     if (doseN === undefined && amountN === undefined) return setMsg("Enter the dose (mg) and/or amount (tabs).");
@@ -228,27 +270,31 @@ const PrnEditor: React.FC<EditorProps> = ({ api, meds, me, busy, blockMed, date,
     <tr className="mar-row-edit">
       <td colSpan={3}>
         <div className="mar-editor">
-          <div className="mar-field mar-field-wide">
-            <span className="mar-field-label">MEDICATION</span>
-            <select className="mar-input" value={medId} onChange={(e) => setMedId(e.target.value)}>
-              <option value="">Choose…</option>
-              {meds.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}{m.strength ? ` – ${m.strength}` : ""}</option>
-              ))}
-            </select>
-          </div>
+          {!sheetMode && (
+            <div className="mar-field mar-field-wide">
+              <span className="mar-field-label">MEDICATION</span>
+              <select className="mar-input" value={medId} onChange={(e) => setMedId(e.target.value)}>
+                <option value="">Choose…</option>
+                {meds.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}{m.strength ? ` – ${m.strength}` : ""}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="mar-field"><span className="mar-field-label">DATE</span>
             <input className="mar-input" type="date" value={day} onChange={(e) => setDay(e.target.value)} /></div>
           <div className="mar-field"><span className="mar-field-label">TIME</span>
             <input className="mar-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} /></div>
-          <div className="mar-field"><span className="mar-field-label">DOSE (mg)</span>
-            <input className="mar-input" inputMode="decimal" value={dose} onChange={(e) => setDose(e.target.value)} /></div>
-          <div className="mar-field"><span className="mar-field-label">AMT (tabs)</span>
+          {layout.showDoseField && (
+            <div className="mar-field"><span className="mar-field-label">DOSE (mg)</span>
+              <input className="mar-input" inputMode="decimal" value={dose} onChange={(e) => setDose(e.target.value)} /></div>
+          )}
+          <div className="mar-field"><span className="mar-field-label">{amtLabel}</span>
             <input className="mar-input" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
           <div className="mar-field"><span className="mar-field-label">INITIAL</span>
             <StaffPicker api={api} value={staff} onChange={setStaff} placeholder="ID" /></div>
           <div className="mar-field mar-field-wide"><span className="mar-field-label">NOTES / WHY NEEDED</span>
-            <input className="mar-input" placeholder="e.g. headache" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+            <input className="mar-input" placeholder={layout.requireWhy ? "e.g. headache" : "Optional"} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
         </div>
         <div className="mar-instr-actions">
           {msg && <span className="mar-msg">{msg}</span>}

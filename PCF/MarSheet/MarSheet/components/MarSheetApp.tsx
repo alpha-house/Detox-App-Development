@@ -142,10 +142,14 @@ export const MarSheetApp: React.FC<MarSheetAppProps> = ({ api, sheetId, userId, 
             <div>Allergies: <b className={c.allergies ? "mar-allergy" : ""}>{c.allergies ?? ""}</b></div>
           </div>
         </div>
-        {isPrn ? (
-          <div className="mar-substance">
-            Medical conditions that are contraindicated with PRN (OTC) Medications: <b>{sheet.contraindications ?? ""}</b>
-          </div>
+        {layout?.kind === "prn" ? (
+          layout.contraLine ? (
+            <div className="mar-substance">
+              Medical conditions that are contraindicated with PRN (OTC) Medications: <b>{sheet.contraindications ?? ""}</b>
+            </div>
+          ) : (
+            <div className="mar-substance-gap" />
+          )
         ) : (
           <div className="mar-substance">
             Substance History: <b>{sheet.substanceHistory ?? ""}</b> <span className="mar-hint">{layout?.substanceHint ?? "(TYPE OF OPIATE / LAST USE)"}</span>

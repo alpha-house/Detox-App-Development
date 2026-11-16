@@ -144,11 +144,14 @@
 .mar-prn-bar { display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; border-bottom: 1px solid var(--rule); }
 .mar-prn-table { table-layout: fixed; }
 .mar-prn-table .mar-prn-med { width: 22%; vertical-align: top; white-space: normal; border-right: 2px solid var(--ink); }
-.mar-prn-table .mar-prn-date { width: 200px; white-space: nowrap; }
+.mar-prn-table .mar-prn-date { width: 200px; white-space: normal; line-height: 1.6; }
+.mar-prn-table .mar-prn-date .mar-tag { white-space: nowrap; display: inline-block; }
 .mar-prn-table .mar-prn-notes { width: 24%; white-space: normal; }
 .mar-prn-table td { height: auto; min-height: 30px; vertical-align: middle; }
 .mar-prn-block { border-top: 2px solid var(--ink); }
 .mar-prn-name { font-weight: 700; text-transform: uppercase; }
+.mar-prn-sheetmed { margin-top: 4px; font-size: 12px; line-height: 1.5; }
+.mar-substance-gap { border-bottom: 2px solid var(--ink); }
 .mar-prn-today { margin-top: 4px; font-size: 12px; font-weight: 600; }
 .mar-prn-over { color: var(--err-ink); }
 .mar-prn-entries { white-space: normal !important; }
